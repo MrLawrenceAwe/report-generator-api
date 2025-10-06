@@ -2,11 +2,6 @@
 
 Turn any topic into a structured outline or a polished, audio-friendly report in minutes.
 
-## Highlights
-- Ask for an outline to plan your content or a finished report with numbered sections ready for reading or narration.
-- **Model control built in**: Override the outline, writer, and translator models per request without touching the codebase.
-- **Bring your own key**: Works with any OpenAI-compatible endpoint; point at a proxy by setting one environment variable.
-
 ## Why teams use it
 - Publish topic briefings for executive updates, customer intelligence, or analyst newsletters.
 - Generate speaking scripts or podcast-ready narration from just a topic sentence.
