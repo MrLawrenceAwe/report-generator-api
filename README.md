@@ -3,10 +3,8 @@
 Turn any topic into a structured outline or a polished, audio-friendly report in minutes.
 
 ## Highlights
-- **Two outputs, one request**: Ask for an outline to plan your content or a finished report with numbered sections ready for narration.
-- **Drop-in FastAPI server**: Comes with typed Pydantic models, streaming helper script
+- Ask for an outline to plan your content or a finished report with numbered sections ready for reading or narration.
 - **Model control built in**: Override the outline, writer, and translator models per request without touching the codebase.
-- **Friendly formats**: Receive JSON or markdown for outlines and plain text reports that read cleanly on voice devices.
 - **Bring your own key**: Works with any OpenAI-compatible endpoint; point at a proxy by setting one environment variable.
 
 ## Why teams use it
