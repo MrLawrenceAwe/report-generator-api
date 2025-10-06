@@ -1,6 +1,4 @@
-# Report Generation API (GPT-4o mini)
-
-This project implements your **Report Generation API Spec** tuned for GPT-4o mini defaults.
+# Report Generation API
 
 ## What you get
 - **Endpoints**
