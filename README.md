@@ -25,7 +25,7 @@ uvicorn app:app --reload --port 8000
 
 Use the helper script `scripts/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving reports as `<topic> report.md` and outlines as `<topic> outline.md` or `<topic> outline.json` depending on `--format` (override with `--outfile`).
 
-### Case A — outline only
+### Example A — outline only
 
 ```bash
 python scripts/stream_report.py --outline --topic "Supply chain resilience in 2025"
@@ -34,7 +34,7 @@ python scripts/stream_report.py --outline --topic "Supply chain resilience in 20
 - Writes `Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
 - Prefer raw HTTP? `curl "http://localhost:8000/outline?topic=..."` works too.
 
-### Case A — full report
+### Example B — full report
 
 ```bash
 python scripts/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
@@ -43,7 +43,7 @@ python scripts/stream_report.py --topic "Supply chain resilience in 2025" --show
 - Streams progress to the terminal and saves `Supply chain resilience in 2025 report.md`.
 - Override the destination with `--outfile`.
 
-### Case B — provide your own outline
+### Example C — provide your own outline
 
 ```bash
 python scripts/stream_report.py --payload-file example_requests/caseB_generate_report.json --show-progress
@@ -60,8 +60,8 @@ python scripts/stream_report.py --topic "Modern Data Governance for AI Teams" --
 
 ## Endpoint overview
 
-- `POST /outline` — Case A (topic only) → returns an outline (JSON by default).
-- `POST /generate_report` — Case A with `mode=generate_report` or Case B (topic + subsections) → returns the final report, optionally alongside the outline used.
+- `POST /outline` — Example A (topic only) → returns an outline (JSON by default).
+- `POST /generate_report` — Example B (`mode=generate_report`) or Example C (topic + subsections) → returns the final report, optionally alongside the outline used.
 
 ### `/outline` request
 
@@ -92,8 +92,8 @@ python scripts/stream_report.py --topic "Modern Data Governance for AI Teams" --
 
 ```jsonc
 {
-  "topic": "Supply chain resilience in 2025",     // required for Case A
-  "mode": "generate_report",                      // required for Case A
+  "topic": "Supply chain resilience in 2025",     // required for Example B
+  "mode": "generate_report",                      // required for Example B
   "outline": {                                    // optional override; omit to auto-outline
     "report_title": "Supply Chain Resilience in 2025",
     "sections": [
