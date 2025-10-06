@@ -2,10 +2,6 @@
 
 Turn any topic into a structured outline or a polished, audio-friendly report in minutes.
 
-## Why teams use it
-- Publish topic briefings for executive updates, customer intelligence, or analyst newsletters.
-- Generate speaking scripts or podcast-ready narration from just a topic sentence.
-
 > ⚠️ Set your OpenAI credential before launching: `export OPENAI_API_KEY=...`
 
 ---
