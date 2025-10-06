@@ -34,6 +34,8 @@ uvicorn app:app --reload --port 8000
 
 ## Try it now
 
+Use the helper script `scripts/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving reports as `<topic> report.md` and outlines as `<topic> outline.md` or `<topic> outline.json` depending on `--format` (override with `--outfile`).
+
 ### Case A — outline only
 
 ```bash
@@ -64,8 +66,6 @@ python scripts/stream_report.py --payload-file example_requests/caseB_generate_r
 pip install httpx  # once per environment
 python scripts/stream_report.py --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
 ```
-
-The helper script prints progress, optionally keeps the streamed NDJSON, and always writes the final report to a markdown file.
 
 ---
 
