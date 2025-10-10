@@ -76,10 +76,11 @@ def _safe_topic_stem(topic: str) -> str:
 
 def _default_outfile(topic: str, kind: Literal["report", "outline"], outline_format: str = "markdown") -> Path:
     stem = _safe_topic_stem(topic)
+    base_dir = Path("generated_reports")
     if kind == "report":
-        return Path(f"{stem} report.md")
+        return base_dir / f"{stem} report.md"
     suffix = "md" if outline_format == "markdown" else "json"
-    return Path(f"{stem} outline.{suffix}")
+    return base_dir / f"{stem} outline.{suffix}"
 
 
 def _infer_topic(payload: Dict[str, Any]) -> str | None:
@@ -131,6 +132,7 @@ def main() -> None:
                 raise SystemExit("Outline response missing 'markdown_outline'.")
             output_text = markdown.strip() + "\n"
 
+        outfile.parent.mkdir(parents=True, exist_ok=True)
         outfile.write_text(output_text, encoding="utf-8")
         print(f"Saved outline to {outfile}")
         return
@@ -138,7 +140,7 @@ def main() -> None:
     payload = load_payload(args.payload_file, args.topic)
 
     inferred_topic = _infer_topic(payload)
-    default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else Path("report.md")
+    default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else Path("generated_reports") / "report.md"
     outfile = args.outfile or default_outfile
     raw_buffer = []
     final_event: Dict[str, Any] | None = None
@@ -171,6 +173,7 @@ def main() -> None:
     if not isinstance(report, str):
         raise SystemExit("Final payload did not contain a 'report' field.")
 
+    outfile.parent.mkdir(parents=True, exist_ok=True)
     outfile.write_text(report, encoding="utf-8")
     print(f"Saved report to {outfile}")
 

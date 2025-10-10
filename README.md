@@ -23,7 +23,7 @@ uvicorn app:app --reload --port 8000
 
 ## Try it now
 
-Use the helper script `scripts/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving reports as `<topic> report.md` and outlines as `<topic> outline.md` or `<topic> outline.json` depending on `--format` (override with `--outfile`).
+Use the helper script `scripts/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving outputs under `generated_reports/` as `<topic> report.md` for reports and `<topic> outline.md` or `<topic> outline.json` for outlines (override with `--outfile`).
 
 ### Example A — outline only
 
@@ -31,7 +31,7 @@ Use the helper script `scripts/stream_report.py` to call the API without writing
 python scripts/stream_report.py --outline --topic "Supply chain resilience in 2025"
 ```
 
-- Writes `Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
+- Writes `generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
 - Prefer raw HTTP? `curl "http://localhost:8000/outline?topic=..."` works too.
 
 ### Example B — full report
@@ -40,7 +40,7 @@ python scripts/stream_report.py --outline --topic "Supply chain resilience in 20
 python scripts/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
 ```
 
-- Streams progress to the terminal and saves `Supply chain resilience in 2025 report.md`.
+- Streams progress to the terminal and saves `generated_reports/Supply chain resilience in 2025 report.md`.
 - Override the destination with `--outfile`.
 
 ### Example C — provide your own outline
