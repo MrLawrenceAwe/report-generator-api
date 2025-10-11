@@ -23,37 +23,37 @@ uvicorn app:app --reload --port 8000
 
 ## Try it now
 
-Use the helper script `scripts/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving outputs under `generated_reports/` as `<topic> report.md` for reports and `<topic> outline.md` or `<topic> outline.json` for outlines (override with `--outfile`).
+Use the helper script `client/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving outputs under `client/generated_reports/` as `<topic> report.md` for reports and `<topic> outline.md` or `<topic> outline.json` for outlines (override with `--outfile`).
 
 ### Example A — outline only
 
 ```bash
-python scripts/stream_report.py --outline --topic "Supply chain resilience in 2025"
+python client/stream_report.py --outline --topic "Supply chain resilience in 2025"
 ```
 
-- Writes `generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
+- Writes `client/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
 - Prefer raw HTTP? `curl "http://localhost:8000/outline?topic=..."` works too.
 
 ### Example B — full report
 
 ```bash
-python scripts/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
+python client/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
 ```
 
-- Streams progress to the terminal and saves `generated_reports/Supply chain resilience in 2025 report.md`.
+- Streams progress to the terminal and saves `client/generated_reports/Supply chain resilience in 2025 report.md`.
 - Override the destination with `--outfile`.
 
 ### Example C — provide your own outline
 
 ```bash
-python scripts/stream_report.py --payload-file example_requests/caseB_generate_report.json --show-progress
+python client/stream_report.py --payload-file example_requests/caseB_generate_report.json --show-progress
 ```
 
 ### Capture the raw NDJSON stream
 
 ```bash
 pip install httpx  # once per environment
-python scripts/stream_report.py --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
+python client/stream_report.py --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
 ```
 
 ---

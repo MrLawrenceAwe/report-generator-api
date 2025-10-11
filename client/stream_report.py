@@ -10,6 +10,9 @@ from typing import Any, Dict, Literal
 
 import re
 
+CLIENT_DIR = Path(__file__).resolve().parent
+GENERATED_REPORTS_DIR = CLIENT_DIR / 'generated_reports'
+
 try:
     import httpx
 except ImportError as exc:  # pragma: no cover - dependency check
@@ -76,7 +79,7 @@ def _safe_topic_stem(topic: str) -> str:
 
 def _default_outfile(topic: str, kind: Literal["report", "outline"], outline_format: str = "markdown") -> Path:
     stem = _safe_topic_stem(topic)
-    base_dir = Path("generated_reports")
+    base_dir = GENERATED_REPORTS_DIR
     if kind == "report":
         return base_dir / f"{stem} report.md"
     suffix = "md" if outline_format == "markdown" else "json"
@@ -140,7 +143,7 @@ def main() -> None:
     payload = load_payload(args.payload_file, args.topic)
 
     inferred_topic = _infer_topic(payload)
-    default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else Path("generated_reports") / "report.md"
+    default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else GENERATED_REPORTS_DIR / 'report.md'
     outfile = args.outfile or default_outfile
     raw_buffer = []
     final_event: Dict[str, Any] | None = None
