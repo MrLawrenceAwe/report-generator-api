@@ -21,33 +21,44 @@ uvicorn app:app --reload --port 8000
 
 ---
 
-## Try it now
+## Run the helper client
 
-Use the helper script `client/stream_report.py` to call the API without writing client code. It streams progress to the terminal, can optionally keep the raw NDJSON, and defaults to saving outputs under `client/generated_reports/` as `<topic> report.md` for reports and `<topic> outline.md` or `<topic> outline.json` for outlines (override with `--outfile`).
+`client/stream_report.py` streams status updates to your terminal, saves finished artifacts under `client/generated_reports/`, and can optionally persist the raw NDJSON stream. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
 
-### Example A — outline only
+### Outline from a topic
 
 ```bash
 python client/stream_report.py --outline --topic "Supply chain resilience in 2025"
 ```
 
-- Writes `client/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
-- Prefer raw HTTP? `curl "http://localhost:8000/outline?topic=..."` works too.
+- Produces `client/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
+- REST payload twin: `example_requests/outline_from_topic.json`.
 
-### Example B — full report from only topic
+### Report from only a topic
 
 ```bash
 python client/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
 ```
 
-- Streams progress to the terminal and saves `client/generated_reports/Supply chain resilience in 2025 report.md`.
-- Override the destination with `--outfile`.
+- Streams progress and saves `client/generated_reports/Supply chain resilience in 2025 report.md`.
+- Use `example_requests/report_from_topic.json` to issue the same request over HTTP or via another client.
 
-### Example C — provide your own outline for full report
+### Report with your outline
 
 ```bash
-python client/stream_report.py --payload-file example_requests/provided_outline_request.json --show-progress
+python client/stream_report.py --payload-file example_requests/report_with_custom_outline.json --show-progress
 ```
+
+- Reuses your outline and returns both the outline and finished report (`return="report_with_outline"` in the payload).
+
+### Report with custom models
+
+```bash
+python client/stream_report.py --payload-file example_requests/report_with_custom_models.json --show-progress
+```
+
+- Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator → cleanup). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
+- Fields you omit fall back to the defaults described under `/generate_report`.
 
 ### Capture the raw NDJSON stream
 
@@ -58,10 +69,10 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 
 ---
 
-## Endpoint overview
+## API endpoints
 
-- `POST /outline` — Example A (topic only) → returns an outline (JSON by default).
-- `POST /generate_report` — Example B (`mode=generate_report`) or Example C (topic + subsections) → returns the final report, optionally alongside the outline used.
+- `POST /outline` — Generate just the outline from a topic (see `example_requests/outline_from_topic.json`).
+- `POST /generate_report` — Produce the full report, optionally supplying a custom outline or model overrides (`example_requests/report_from_topic.json`, `report_with_custom_outline.json`, `report_with_custom_models.json`).
 
 ### `/outline` request
 
@@ -92,9 +103,9 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 
 ```jsonc
 {
-  "topic": "Supply chain resilience in 2025",     // required for Example B
-  "mode": "generate_report",                      // required for Example B
-  "outline": {                                    // optional override; omit to auto-outline
+  "topic": "Supply chain resilience in 2025",
+  "mode": "generate_report",
+  "outline": {
     "report_title": "Supply Chain Resilience in 2025",
     "sections": [
       {"title": "1. Introduction", "subsections": ["1.1 Definition", "1.2 Context"]}
@@ -105,8 +116,8 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
     "writer":    {"model": "gpt-4o-mini"},
     "translator":{"model": "gpt-4o-mini"}
   },
-  "writer_fallback": "gpt-4o-mini", // optional; overrides the writer model when provided
-  "return": "report"               // "report" (default) or "report_with_outline"
+  "writer_fallback": "gpt-4o-mini",
+  "return": "report"
 }
 ```
 
@@ -116,7 +127,7 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 {
   "report_title": "Supply Chain Resilience in 2025",
   "report": "Full audio-friendly narration...",
-  "outline_used": {...} // only when return=report_with_outline
+  "outline_used": {...}
 }
 ```
 
