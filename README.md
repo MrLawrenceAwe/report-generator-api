@@ -34,7 +34,7 @@ python client/stream_report.py --outline --topic "Supply chain resilience in 202
 - Writes `client/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` for `... outline.json`).
 - Prefer raw HTTP? `curl "http://localhost:8000/outline?topic=..."` works too.
 
-### Example B — full report
+### Example B — full report from only topic
 
 ```bash
 python client/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
@@ -43,10 +43,10 @@ python client/stream_report.py --topic "Supply chain resilience in 2025" --show-
 - Streams progress to the terminal and saves `client/generated_reports/Supply chain resilience in 2025 report.md`.
 - Override the destination with `--outfile`.
 
-### Example C — provide your own outline
+### Example C — provide your own outline for full report
 
 ```bash
-python client/stream_report.py --payload-file example_requests/caseB_generate_report.json --show-progress
+python client/stream_report.py --payload-file example_requests/provided_outline_request.json --show-progress
 ```
 
 ### Capture the raw NDJSON stream
