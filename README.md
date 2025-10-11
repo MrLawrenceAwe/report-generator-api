@@ -1,4 +1,4 @@
-# Report Generation API
+# Report Generator API
 
 Turn any topic into a structured outline or a polished, audio-friendly report in minutes.
 
