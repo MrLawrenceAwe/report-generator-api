@@ -2,7 +2,24 @@
 
 Turn any topic into a structured outline or a polished, audio-friendly report in minutes.
 
-> ⚠️ Set your OpenAI credential before launching: `export OPENAI_API_KEY=...`
+---
+
+## Set your OpenAI credential
+
+The FastAPI service (`uvicorn app:app`) calls OpenAI’s API through the official Python SDK, so it needs your credential. Set these environment variables _in the shell that launches the server_ (and in any other process that will contact OpenAI on your behalf):
+
+```bash
+export OPENAI_API_KEY="sk-your-key"
+# Optional: point at a proxy or gateway
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+```
+
+If you prefer to avoid exporting variables manually, drop them in a `.env` file and source it (`source .env`) before starting the API. When running commands inline, you can also prefix them:
+
+```bash
+OPENAI_API_KEY="sk-your-key" uvicorn app:app --reload --port 8000
+python client/stream_report.py --topic "Future of urban farming"
+```
 
 ---
 
@@ -23,7 +40,7 @@ uvicorn app:app --reload --port 8000
 
 ## Run the helper client
 
-`client/stream_report.py` streams status updates to your terminal, saves finished artifacts under `client/generated_reports/`, and can optionally persist the raw NDJSON stream. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
+`client/stream_report.py` streams status updates to your terminal, saves finished artifacts under `client/generated_reports/`, and can optionally persist the raw NDJSON stream. It simply hits the API endpoint you configure (default `http://localhost:8000/generate_report`), so no OpenAI credential is required unless the server you are pointing at expects one in its own environment. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
 
 ### Outline from a topic
 
