@@ -93,6 +93,8 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 
 ### `/outline` request
 
+**Example request payload**
+
 ```jsonc
 {
   "topic": "Supply chain resilience in 2025",
@@ -117,6 +119,8 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 > Switch `format` to `markdown` to receive a Markdown outline instead.
 
 ### `/generate_report` request
+
+**Example request payload**
 
 ```jsonc
 {
