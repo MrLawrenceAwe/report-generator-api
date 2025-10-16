@@ -51,7 +51,7 @@ python client/stream_report.py --outline --topic "Supply chain resilience in 202
 - Produces `client/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
 - REST payload twin: `example_requests/outline_from_topic.json`.
 
-### Report from only a topic
+### Report from only a topic (auto-generated outline)
 
 ```bash
 python client/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
