@@ -88,10 +88,10 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 
 ## API endpoints
 
-- `POST /outline` — Generate just the outline from a topic (see `example_requests/outline_from_topic.json`).
+- `GET/POST /generate_outline` — Generate just the outline from a topic (see `example_requests/outline_from_topic.json`).
 - `POST /generate_report` — Produce the full report, optionally supplying a custom outline or model overrides (`example_requests/report_from_topic.json`, `report_with_custom_outline.json`, `report_with_custom_models.json`).
 
-### `/outline` request
+### `/generate_outline` request
 
 **Example request payload**
 
@@ -116,7 +116,7 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 }
 ```
 
-> Switch `format` to `markdown` to receive a Markdown outline instead.
+> Switch `format` to `markdown` to receive a Markdown outline instead. Provide the same parameters as query string values for the GET variant.
 
 ### `/generate_report` request
 

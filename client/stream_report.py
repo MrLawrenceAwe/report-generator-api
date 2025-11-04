@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--url",
         default="http://localhost:8000/generate_report",
-        help="Endpoint to call (default: %(default)s). Automatically adjusted to /outline when --outline is passed.",
+        help="Endpoint to call (default: %(default)s). Automatically adjusted to /generate_outline when --outline is passed.",
     )
     parser.add_argument(
         "--outline",
@@ -114,7 +114,7 @@ def main() -> None:
             raise SystemExit("Provide --topic when requesting an outline.")
         target = args.url
         if target.endswith("/generate_report"):
-            target = target.rsplit("/", 1)[0] + "/outline"
+            target = target.rsplit("/", 1)[0] + "/generate_outline"
 
         outfile = args.outfile
         if outfile is None:
