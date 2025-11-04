@@ -64,7 +64,7 @@ def generate_outline_post(
 @app.post("/generate_report")
 def generate_report(req: GenerateRequest):
     if req.outline is None and (not req.topic or req.mode != "generate_report"):
-        raise HTTPException(status_code=400, detail="For Case A with /generate_report, provide {topic, mode='generate_report'}.")
+        raise HTTPException(status_code=400, detail="When only a topic is provided, include \"mode\":\"generate_report\".")
 
     async def event_stream():
         try:
