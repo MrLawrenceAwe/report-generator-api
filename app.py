@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from report_generator.models import GenerateRequest, OutlineRequest, ReasoningEffort
 from report_generator.report_service import OutlineParsingError, OutlineService, ReportGenerationService
 
-app = FastAPI(title="Report Generation API", version="2.0.0")
+app = FastAPI(title="Report Generator API", version="2.0.0")
 
 _outline_service = OutlineService()
 _report_service = ReportGenerationService()
