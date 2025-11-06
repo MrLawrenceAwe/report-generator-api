@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List
 
 from .formatting import (
     ensure_section_numbering,
@@ -13,15 +13,11 @@ from .models import (
     GenerateRequest,
     ModelSpec,
     Outline,
-    OutlineRequest,
-    ReasoningEffort,
     maybe_add_reasoning,
-    supports_reasoning,
 )
-from .openai_client import call_openai_text, call_openai_text_async
+from .openai_client import call_openai_text_async
 from .prompts import (
     build_outline_prompt_json,
-    build_outline_prompt_markdown,
     build_section_translator_prompt,
     build_section_writer_prompt,
     build_translation_cleanup_prompt,
@@ -29,48 +25,7 @@ from .prompts import (
 from .summary import is_summary_or_conclusion_section
 
 
-class OutlineService:
-    """Encapsulates outline request helpers shared by GET/POST flows."""
-
-    @staticmethod
-    def build_outline_request(
-        topic: str,
-        fmt: str,
-        model_name: Optional[str],
-        reasoning_effort: Optional[ReasoningEffort],
-    ) -> OutlineRequest:
-        model_spec = ModelSpec(model=model_name or "gpt-4o-mini")
-        if reasoning_effort and supports_reasoning(model_spec.model):
-            model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
-        return OutlineRequest(topic=topic, format=fmt, model=model_spec)
-
-    @staticmethod
-    def handle_outline_request(req: OutlineRequest) -> Dict[str, Any]:
-        system = "You generate structured outlines."
-        prompt = (
-            build_outline_prompt_json(req.topic)
-            if req.format == "json"
-            else build_outline_prompt_markdown(req.topic)
-        )
-        text = call_openai_text(req.model, system, prompt)
-        if req.format == "json":
-            try:
-                outline = parse_outline_json(text)
-                return outline.model_dump()
-            except Exception as exc:  # pragma: no cover - defensive
-                raise OutlineParsingError(str(exc), text) from exc
-        return {"markdown_outline": text}
-
-
-class OutlineParsingError(Exception):
-    """Raised when the LLM returns malformed JSON for the outline."""
-
-    def __init__(self, message: str, raw_response: str):
-        super().__init__(message)
-        self.raw_response = raw_response
-
-
-class ReportGenerationService:
+class ReportGeneratorService:
     async def stream_report(self, req: GenerateRequest) -> AsyncGenerator[Dict[str, Any], None]:
         provided_outline = req.outline
 
