@@ -70,13 +70,20 @@ Instructions:
 """
 
 
-def build_section_translator_prompt(report_title: str, section_title: str, section_text: str) -> str:
+def build_section_translator_prompt(
+    report_title: str, section_title: str, section_text: str, strip_meta: bool = False
+) -> str:
     section_body = section_text.strip() or "(no body text)"
+    cleanup_clause = (
+        " Never add translator prefaces such as 'Here you go' or meta commentary; start with the first heading immediately."
+        if strip_meta
+        else ""
+    )
     return f"""
 Translate the following section body from the report "{report_title}" into an audio-friendly narration while preserving every fact.
 Keep every heading line exactly as written (they already contain numbering like `1.1: ...`); do not add Markdown `#` symbols, change the numbering, or repeat the section title "{section_title}".
 Rewrite only the paragraph text beneath those headings using a conversational tone.
-Never add translator prefaces such as "Sure, here's the translation" or meta commentary; begin directly with the first heading and narration.
+Never add translator prefaces such as "Sure, here's the translation" or meta commentary; begin directly with the first heading and narration.{cleanup_clause}
 
 Section body to translate:
 {section_body}
@@ -96,13 +103,3 @@ Section: "{section_title}"
 Narration to clean:
 {narration}
 """
-
-
-def build_summary_detection_prompt(section_title: str, subsection_titles: List[str]) -> str:
-    subsection_lines = "\n".join(f"- {title}" for title in subsection_titles) if subsection_titles else "(no subsections listed)"
-    return (
-        "Determine whether the section below is a summary or conclusion section for the report.\n"
-        "Respond with YES or NO.\n\n"
-        f"Section title: {section_title}\n"
-        f"Subsections:\n{subsection_lines}\n"
-    )

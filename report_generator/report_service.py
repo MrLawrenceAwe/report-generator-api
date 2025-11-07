@@ -9,22 +9,22 @@ from .formatting import (
     ensure_section_numbering,
     ensure_subsection_numbering,
     enforce_subsection_headings,
-    parse_outline_json,
 )
 from .models import (
     GenerateRequest,
     ModelSpec,
     Outline,
+    OutlineRequest,
     maybe_add_reasoning,
 )
 from .openai_client import call_openai_text_async
+from .outline_service import OutlineParsingError, OutlineService
 from .prompts import (
-    build_outline_prompt_json,
     build_section_translator_prompt,
     build_section_writer_prompt,
     build_translation_cleanup_prompt,
 )
-from .summary import is_summary_or_conclusion_section
+from .summary import should_elevate_context
 
 
 @dataclass
@@ -59,6 +59,9 @@ class WriterState:
 
 
 class ReportGeneratorService:
+    def __init__(self, outline_service: Optional[OutlineService] = None) -> None:
+        self.outline_service = outline_service or OutlineService()
+
     async def stream_report(self, generate_request: GenerateRequest) -> AsyncGenerator[Dict[str, Any], None]:
         runner = _ReportStreamRunner(self, generate_request)
         async for event in runner.run():
@@ -101,6 +104,7 @@ class _ReportStreamRunner:
             self.writer_spec,
             ModelSpec(model=self.request.writer_fallback) if self.request.writer_fallback else None,
         )
+        self.cleanup_required = self.cleanup_spec.model != self.translator_spec.model
 
     async def run(self) -> AsyncGenerator[Dict[str, Any], None]:
         async with self.service._emit_status({"status": "started"}) as status:
@@ -108,21 +112,26 @@ class _ReportStreamRunner:
 
         provided_outline = self.request.outline
         if provided_outline is None:
-            system = "You generate structured outlines."
-            prompt = build_outline_prompt_json(self.request.topic)
+            if not self.request.topic:
+                async with self.service._emit_status(
+                    {"status": "error", "detail": "A topic is required when no outline is provided."}
+                ) as status:
+                    yield status
+                return
+
             outline_status: Dict[str, Any] = {"status": "generating_outline", "model": self.outline_spec.model}
             maybe_add_reasoning(outline_status, "reasoning_effort", self.outline_spec)
             async with self.service._emit_status(outline_status) as status:
                 yield status
 
-            text = await call_openai_text_async(self.outline_spec, system, prompt)
+            outline_request = OutlineRequest(topic=self.request.topic, model=self.outline_spec)
             try:
-                outline = parse_outline_json(text)
-            except Exception as exception:  # pragma: no cover - defensive
+                outline = await asyncio.to_thread(self.service.outline_service.generate_outline, outline_request)
+            except OutlineParsingError as exception:  # pragma: no cover - defensive
                 error_status = {
                     "status": "error",
                     "detail": f"Failed to parse outline JSON: {exception}",
-                    "raw_outline": text,
+                    "raw_outline": exception.raw_response,
                 }
                 async with self.service._emit_status(error_status) as status:
                     yield status
@@ -160,7 +169,7 @@ class _ReportStreamRunner:
                 yield status
 
             writer_system = "You write high-quality, well-structured prose that continues a report seamlessly."
-            elevate_context = await is_summary_or_conclusion_section(section_title, subsection_titles)
+            elevate_context = should_elevate_context(section_title, subsection_titles)
             report_context = None
             if elevate_context and written_sections:
                 report_context = "\n\n".join(f"{item.title}\n\n{item.body}" for item in written_sections)
@@ -187,15 +196,28 @@ class _ReportStreamRunner:
 
             async with self.service._emit_status({"status": "translating_section", "section": section_title}) as status:
                 yield status
-            narrated = await self._translate_section(outline.report_title, section_title, section_text)
+            narrated = await self._translate_section(
+                outline.report_title,
+                section_title,
+                section_text,
+                inline_cleanup=not self.cleanup_required,
+            )
 
-            async with self.service._emit_status({"status": "cleaning_section", "section": section_title}) as status:
-                yield status
-            cleaned_narration = await self._cleanup_section(outline.report_title, section_title, narrated, subsection_titles)
+            cleaned_narration = narrated
+            if self.cleanup_required:
+                async with self.service._emit_status({"status": "cleaning_section", "section": section_title}) as status:
+                    yield status
+                cleaned_narration = await self._cleanup_section(
+                    outline.report_title,
+                    section_title,
+                    narrated,
+                )
+
+            cleaned_narration = enforce_subsection_headings(cleaned_narration, subsection_titles).strip()
 
             if assembled_narration:
                 assembled_narration += "\n\n"
-            assembled_narration += f"{section_title}\n\n{cleaned_narration.strip()}"
+            assembled_narration += f"{section_title}\n\n{cleaned_narration}"
 
             async with self.service._emit_status({"status": "section_complete", "section": section_title}) as status:
                 yield status
@@ -218,13 +240,13 @@ class _ReportStreamRunner:
             "count": len(outline.sections),
             "writer_model": self.writer_spec.model,
             "translator_model": self.translator_spec.model,
-            "cleanup_model": self.cleanup_spec.model,
         }
         if self.writer_state.fallback:
             begin_status["writer_fallback_model"] = self.writer_state.fallback.model
         maybe_add_reasoning(begin_status, "writer_reasoning_effort", self.writer_spec)
         maybe_add_reasoning(begin_status, "translator_reasoning_effort", self.translator_spec)
-        if self.cleanup_spec is not self.translator_spec:
+        if self.cleanup_required:
+            begin_status["cleanup_model"] = self.cleanup_spec.model
             maybe_add_reasoning(begin_status, "cleanup_reasoning_effort", self.cleanup_spec)
         return begin_status
 
@@ -239,19 +261,23 @@ class _ReportStreamRunner:
             "error": error,
         }
 
-    async def _translate_section(self, report_title: str, section_title: str, section_text: str) -> str:
-        translator_system = "You translate prose into clear, audio-friendly narration without losing information."
-        translator_prompt = build_section_translator_prompt(report_title, section_title, section_text)
-        return await call_openai_text_async(self.translator_spec, translator_system, translator_prompt)
-
-    async def _cleanup_section(
+    async def _translate_section(
         self,
         report_title: str,
         section_title: str,
-        narrated: str,
-        subsection_titles: List[str],
+        section_text: str,
+        inline_cleanup: bool,
     ) -> str:
+        translator_system = "You translate prose into clear, audio-friendly narration without losing information."
+        translator_prompt = build_section_translator_prompt(
+            report_title,
+            section_title,
+            section_text,
+            strip_meta=inline_cleanup,
+        )
+        return await call_openai_text_async(self.translator_spec, translator_system, translator_prompt)
+
+    async def _cleanup_section(self, report_title: str, section_title: str, narrated: str) -> str:
         cleanup_system = "You remove meta commentary from narrated report sections while keeping content intact."
         cleanup_prompt = build_translation_cleanup_prompt(report_title, section_title, narrated)
-        cleaned = await call_openai_text_async(self.cleanup_spec, cleanup_system, cleanup_prompt)
-        return enforce_subsection_headings(cleaned, subsection_titles)
+        return await call_openai_text_async(self.cleanup_spec, cleanup_system, cleanup_prompt)

@@ -11,7 +11,7 @@ from report_generator.report_service import ReportGeneratorService
 app = FastAPI(title="Report Generator API", version="2.0.0")
 
 _outline_service = OutlineService()
-_report_service = ReportGeneratorService()
+_report_service = ReportGeneratorService(outline_service=_outline_service)
 
 
 def _build_outline_request(
