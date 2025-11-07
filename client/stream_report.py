@@ -145,29 +145,34 @@ def main() -> None:
     inferred_topic = _infer_topic(payload)
     default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else GENERATED_REPORTS_DIR / 'report.md'
     outfile = args.outfile or default_outfile
-    raw_buffer = []
     final_event: Dict[str, Any] | None = None
-
-    with httpx.Client(timeout=None) as client:
-        with client.stream("POST", args.url, json=payload) as response:
-            response.raise_for_status()
-            for line in response.iter_lines():
-                if line is None:
-                    continue
-                line = line.strip()
-                if not line:
-                    continue
-                raw_buffer.append(line)
-                if args.show_progress:
-                    print(line)
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                final_event = event
-
+    raw_stream_handle = None
     if args.raw_stream:
-        args.raw_stream.write_text("\n".join(raw_buffer) + "\n", encoding="utf-8")
+        args.raw_stream.parent.mkdir(parents=True, exist_ok=True)
+        raw_stream_handle = args.raw_stream.open("w", encoding="utf-8")
+
+    try:
+        with httpx.Client(timeout=None) as client:
+            with client.stream("POST", args.url, json=payload) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if line is None:
+                        continue
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if raw_stream_handle:
+                        raw_stream_handle.write(line + "\n")
+                    if args.show_progress:
+                        print(line)
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    final_event = event
+    finally:
+        if raw_stream_handle:
+            raw_stream_handle.close()
 
     if not final_event:
         raise SystemExit("Stream ended without a JSON payload to write.")

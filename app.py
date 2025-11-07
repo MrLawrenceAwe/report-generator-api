@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -39,7 +39,7 @@ def _handle_outline_request(outline_request: OutlineRequest):
 @app.get("/generate_outline")
 def generate_outline(
     topic: str = Query(..., description="Topic to outline"),
-    outline_format: str = Query("json", alias="format"),
+    outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
     model: Optional[str] = Query(None, description="Model name override"),
     reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
 ):
@@ -51,7 +51,7 @@ def generate_outline(
 def generate_outline_post(
     outline_request: Optional[OutlineRequest] = Body(default=None),
     topic: Optional[str] = Query(None, description="Topic to outline"),
-    outline_format: str = Query("json", alias="format"),
+    outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
     model: Optional[str] = Query(None, description="Model name override"),
     reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
 ):

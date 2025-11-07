@@ -73,9 +73,11 @@ class ReportGeneratorService:
         translator_spec = generate_request.models.get("translator", ModelSpec(model="gpt-4o-mini"))
         cleanup_spec = generate_request.models.get("cleanup", translator_spec)
 
-        if generate_request.writer_fallback:
-            writer_spec.model = generate_request.writer_fallback
-            writer_spec.reasoning_effort = None
+        writer_fallback_spec = (
+            ModelSpec(model=generate_request.writer_fallback) if generate_request.writer_fallback else None
+        )
+        writer_active_spec = writer_spec
+        writer_using_fallback = False
 
         assembled_narration = outline.report_title
 
@@ -86,6 +88,8 @@ class ReportGeneratorService:
             "translator_model": translator_spec.model,
             "cleanup_model": cleanup_spec.model,
         }
+        if writer_fallback_spec:
+            begin_sections_status["writer_fallback_model"] = writer_fallback_spec.model
         maybe_add_reasoning(begin_sections_status, "writer_reasoning_effort", writer_spec)
         maybe_add_reasoning(begin_sections_status, "translator_reasoning_effort", translator_spec)
         if cleanup_spec is not translator_spec:
@@ -114,7 +118,25 @@ class ReportGeneratorService:
                 subsection_titles,
                 full_report_context=report_context,
             )
-            section_text = await call_openai_text_async(writer_spec, writer_system, writer_prompt)
+            while True:
+                try:
+                    section_text = await call_openai_text_async(writer_active_spec, writer_system, writer_prompt)
+                    break
+                except Exception as exception:
+                    if writer_fallback_spec and not writer_using_fallback:
+                        writer_using_fallback = True
+                        writer_active_spec = writer_fallback_spec
+                        fallback_status = {
+                            "status": "writer_model_fallback",
+                            "section": section_title,
+                            "previous_model": writer_spec.model,
+                            "fallback_model": writer_active_spec.model,
+                            "error": str(exception),
+                        }
+                        yield fallback_status
+                        await self._yield_control()
+                        continue
+                    raise
             section_text = enforce_subsection_headings(section_text, subsection_titles)
             written_sections.append({"title": section_title, "body": section_text.strip()})
 
