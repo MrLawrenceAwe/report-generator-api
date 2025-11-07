@@ -33,12 +33,11 @@ def call_openai_text(model_spec: ModelSpec, system_prompt: str, user_prompt: str
     if model_spec.reasoning_effort and supports_reasoning(model_spec.model):
         kwargs["reasoning"] = {"effort": model_spec.reasoning_effort}
 
-    resp = client.responses.create(**kwargs)
-    return resp.output_text
+    response = client.responses.create(**kwargs)
+    return response.output_text
 
 
 async def call_openai_text_async(
     model_spec: ModelSpec, system_prompt: str, user_prompt: str, style_hint: Optional[str] = None
 ) -> str:
     return await asyncio.to_thread(call_openai_text, model_spec, system_prompt, user_prompt, style_hint)
-

@@ -16,63 +16,63 @@ _report_service = ReportGeneratorService()
 
 def _build_outline_request(
     topic: str,
-    fmt: str,
+    outline_format: str,
     model_name: Optional[str],
     reasoning_effort: Optional[ReasoningEffort],
 ) -> OutlineRequest:
-    return _outline_service.build_outline_request(topic, fmt, model_name, reasoning_effort)
+    return _outline_service.build_outline_request(topic, outline_format, model_name, reasoning_effort)
 
 
-def _handle_outline_request(req: OutlineRequest):
+def _handle_outline_request(outline_request: OutlineRequest):
     try:
-        return _outline_service.handle_outline_request(req)
-    except OutlineParsingError as exc:
+        return _outline_service.handle_outline_request(outline_request)
+    except OutlineParsingError as exception:
         raise HTTPException(
             status_code=502,
             detail={
-                "error": f"Failed to parse outline JSON: {exc}",
-                "raw_response": exc.raw_response,
+                "error": f"Failed to parse outline JSON: {exception}",
+                "raw_response": exception.raw_response,
             },
-        ) from exc
+        ) from exception
 
 
 @app.get("/generate_outline")
 def generate_outline(
     topic: str = Query(..., description="Topic to outline"),
-    fmt: str = Query("json", alias="format"),
+    outline_format: str = Query("json", alias="format"),
     model: Optional[str] = Query(None, description="Model name override"),
     reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
 ):
-    req = _build_outline_request(topic, fmt, model, reasoning_effort)
-    return _handle_outline_request(req)
+    outline_request = _build_outline_request(topic, outline_format, model, reasoning_effort)
+    return _handle_outline_request(outline_request)
 
 
 @app.post("/generate_outline")
 def generate_outline_post(
-    req: Optional[OutlineRequest] = Body(default=None),
+    outline_request: Optional[OutlineRequest] = Body(default=None),
     topic: Optional[str] = Query(None, description="Topic to outline"),
-    fmt: str = Query("json", alias="format"),
+    outline_format: str = Query("json", alias="format"),
     model: Optional[str] = Query(None, description="Model name override"),
     reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
 ):
-    if req is None:
+    if outline_request is None:
         if not topic:
             raise HTTPException(status_code=400, detail="Provide a topic via query when no JSON body is supplied.")
-        req = _build_outline_request(topic, fmt, model, reasoning_effort)
-    return _handle_outline_request(req)
+        outline_request = _build_outline_request(topic, outline_format, model, reasoning_effort)
+    return _handle_outline_request(outline_request)
 
 
 @app.post("/generate_report")
-def generate_report(req: GenerateRequest):
-    if req.outline is None and (not req.topic or req.mode != "generate_report"):
+def generate_report(generate_request: GenerateRequest):
+    if generate_request.outline is None and (not generate_request.topic or generate_request.mode != "generate_report"):
         raise HTTPException(status_code=400, detail="When only a topic is provided, include \"mode\":\"generate_report\".")
 
     async def event_stream():
         try:
-            async for event in _report_service.stream_report(req):
+            async for event in _report_service.stream_report(generate_request):
                 yield json.dumps(event) + "\n"
-        except Exception as exc:  # pragma: no cover - defensive
-            yield json.dumps({"status": "error", "detail": str(exc)}) + "\n"
+        except Exception as exception:  # pragma: no cover - defensive
+            yield json.dumps({"status": "error", "detail": str(exception)}) + "\n"
 
     return StreamingResponse(
         event_stream(),
@@ -86,4 +86,4 @@ def generate_report(req: GenerateRequest):
 
 @app.get("/_routes")
 def list_routes():
-    return {"paths": [r.path for r in app.routes]}
+    return {"paths": [route.path for route in app.routes]}

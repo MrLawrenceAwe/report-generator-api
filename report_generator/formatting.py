@@ -42,17 +42,17 @@ def ensure_subsection_numbering(title: str, section_index: int, subsection_index
 def enforce_subsection_headings(section_text: str, subsection_titles: List[str]) -> str:
     lines = section_text.splitlines()
     result = []
-    idx = 0
+    subsection_cursor = 0
     hash_heading_pattern = re.compile(r"^###\s*")
     numbered_heading_pattern = re.compile(r"^(?:###\s*)?\d+(?:\.\d+)*\s*[:.-]?")
 
     for line in lines:
         stripped = line.lstrip()
-        if idx < len(subsection_titles):
+        if subsection_cursor < len(subsection_titles):
             if hash_heading_pattern.match(stripped) or numbered_heading_pattern.match(stripped):
                 prefix = line[: len(line) - len(stripped)]
-                result.append(f"{prefix}{subsection_titles[idx]}")
-                idx += 1
+                result.append(f"{prefix}{subsection_titles[subsection_cursor]}")
+                subsection_cursor += 1
                 continue
         result.append(line)
 
@@ -71,4 +71,3 @@ def parse_outline_json(text: str) -> Outline:
 
     data = loads(cleaned)
     return Outline(**data)
-

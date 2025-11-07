@@ -15,8 +15,8 @@ GENERATED_REPORTS_DIR = CLIENT_DIR / 'generated_reports'
 
 try:
     import httpx
-except ImportError as exc:  # pragma: no cover - dependency check
-    raise SystemExit("httpx is required to run this script (pip install httpx)") from exc
+except ImportError as exception:  # pragma: no cover - dependency check
+    raise SystemExit("httpx is required to run this script (pip install httpx)") from exception
 
 
 def parse_args() -> argparse.Namespace:

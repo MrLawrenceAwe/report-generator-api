@@ -40,7 +40,7 @@ def build_section_writer_prompt(
     full_report_context: Optional[str] = None,
 ) -> str:
     headers_list = "\n".join(all_section_headers)
-    subs_list = "\n".join(current_subsections) if current_subsections else "(none)"
+    subsections_list = "\n".join(current_subsections) if current_subsections else "(none)"
     context_block = ""
     if full_report_context:
         context_block = (
@@ -60,7 +60,7 @@ Current section to write:
 {context_block if context_block else ''}
 
 Subsections to cover inside this section:
-{subs_list}
+{subsections_list}
 
 Instructions:
 - For each subsection label listed above, start a new heading line using the label exactly as written (for example `1.1: Definition`). Follow each heading with 1–3 cohesive paragraphs that cover that subsection.
@@ -106,4 +106,3 @@ def build_summary_detection_prompt(section_title: str, subsection_titles: List[s
         f"Section title: {section_title}\n"
         f"Subsections:\n{subsection_lines}\n"
     )
-

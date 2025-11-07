@@ -26,16 +26,16 @@ from .summary import is_summary_or_conclusion_section
 
 
 class ReportGeneratorService:
-    async def stream_report(self, req: GenerateRequest) -> AsyncGenerator[Dict[str, Any], None]:
-        provided_outline = req.outline
+    async def stream_report(self, generate_request: GenerateRequest) -> AsyncGenerator[Dict[str, Any], None]:
+        provided_outline = generate_request.outline
 
         yield {"status": "started"}
         await self._yield_control()
 
-        outline_spec = req.models.get("outline", ModelSpec(model="gpt-4o-mini"))
+        outline_spec = generate_request.models.get("outline", ModelSpec(model="gpt-4o-mini"))
         if provided_outline is None:
             system = "You generate structured outlines."
-            prompt = build_outline_prompt_json(req.topic)
+            prompt = build_outline_prompt_json(generate_request.topic)
             outline_status: Dict[str, Any] = {"status": "generating_outline", "model": outline_spec.model}
             maybe_add_reasoning(outline_status, "reasoning_effort", outline_spec)
             yield outline_status
@@ -44,10 +44,10 @@ class ReportGeneratorService:
             text = await call_openai_text_async(outline_spec, system, prompt)
             try:
                 outline = parse_outline_json(text)
-            except Exception as exc:  # pragma: no cover - defensive
+            except Exception as exception:  # pragma: no cover - defensive
                 yield {
                     "status": "error",
-                    "detail": f"Failed to parse outline JSON: {exc}",
+                    "detail": f"Failed to parse outline JSON: {exception}",
                     "raw_outline": text,
                 }
                 await self._yield_control()
@@ -69,12 +69,12 @@ class ReportGeneratorService:
         numbered_sections = self._build_numbered_sections(outline)
         all_section_headers = [entry["section_title"] for entry in numbered_sections]
 
-        writer_spec = req.models.get("writer", ModelSpec(model="gpt-4o-mini"))
-        translator_spec = req.models.get("translator", ModelSpec(model="gpt-4o-mini"))
-        cleanup_spec = req.models.get("cleanup", translator_spec)
+        writer_spec = generate_request.models.get("writer", ModelSpec(model="gpt-4o-mini"))
+        translator_spec = generate_request.models.get("translator", ModelSpec(model="gpt-4o-mini"))
+        cleanup_spec = generate_request.models.get("cleanup", translator_spec)
 
-        if req.writer_fallback:
-            writer_spec.model = req.writer_fallback
+        if generate_request.writer_fallback:
+            writer_spec.model = generate_request.writer_fallback
             writer_spec.reasoning_effort = None
 
         assembled_narration = outline.report_title
@@ -143,7 +143,7 @@ class ReportGeneratorService:
             "report_title": outline.report_title,
             "report": assembled_narration,
         }
-        if req.return_ == "report_with_outline":
+        if generate_request.return_ == "report_with_outline":
             final_payload["outline_used"] = outline.model_dump()
 
         yield final_payload
@@ -152,10 +152,11 @@ class ReportGeneratorService:
     @staticmethod
     def _build_numbered_sections(outline: Outline) -> List[Dict[str, Any]]:
         numbered_sections: List[Dict[str, Any]] = []
-        for idx, sec in enumerate(outline.sections, start=1):
-            section_title = ensure_section_numbering(sec.title, idx)
+        for section_index, section in enumerate(outline.sections, start=1):
+            section_title = ensure_section_numbering(section.title, section_index)
             subsection_titles = [
-                ensure_subsection_numbering(sub, idx, sub_idx) for sub_idx, sub in enumerate(sec.subsections, start=1)
+                ensure_subsection_numbering(subsection, section_index, subsection_index)
+                for subsection_index, subsection in enumerate(section.subsections, start=1)
             ]
             numbered_sections.append({"section_title": section_title, "subsections": subsection_titles})
         return numbered_sections

@@ -14,30 +14,30 @@ class OutlineService:
     @staticmethod
     def build_outline_request(
         topic: str,
-        fmt: str,
+        outline_format: str,
         model_name: Optional[str],
         reasoning_effort: Optional[ReasoningEffort],
     ) -> OutlineRequest:
         model_spec = ModelSpec(model=model_name or "gpt-4o-mini")
         if reasoning_effort and supports_reasoning(model_spec.model):
             model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
-        return OutlineRequest(topic=topic, format=fmt, model=model_spec)
+        return OutlineRequest(topic=topic, format=outline_format, model=model_spec)
 
     @staticmethod
-    def handle_outline_request(req: OutlineRequest) -> Dict[str, Any]:
+    def handle_outline_request(outline_request: OutlineRequest) -> Dict[str, Any]:
         system = "You generate structured outlines."
         prompt = (
-            build_outline_prompt_json(req.topic)
-            if req.format == "json"
-            else build_outline_prompt_markdown(req.topic)
+            build_outline_prompt_json(outline_request.topic)
+            if outline_request.format == "json"
+            else build_outline_prompt_markdown(outline_request.topic)
         )
-        text = call_openai_text(req.model, system, prompt)
-        if req.format == "json":
+        text = call_openai_text(outline_request.model, system, prompt)
+        if outline_request.format == "json":
             try:
                 outline = parse_outline_json(text)
                 return outline.model_dump()
-            except Exception as exc:  # pragma: no cover - defensive
-                raise OutlineParsingError(str(exc), text) from exc
+            except Exception as exception:  # pragma: no cover - defensive
+                raise OutlineParsingError(str(exception), text) from exception
         return {"markdown_outline": text}
 
 
