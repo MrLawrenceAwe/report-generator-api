@@ -36,19 +36,8 @@ def _handle_outline_request(outline_request: OutlineRequest):
         ) from exception
 
 
-@app.get("/generate_outline")
-def generate_outline(
-    topic: str = Query(..., description="Topic to outline"),
-    outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
-    model: Optional[str] = Query(None, description="Model name override"),
-    reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
-):
-    outline_request = _build_outline_request(topic, outline_format, model, reasoning_effort)
-    return _handle_outline_request(outline_request)
-
-
-@app.post("/generate_outline")
-def generate_outline_post(
+@app.api_route("/generate_outline", methods=["GET", "POST"])
+def generate_outline_endpoint(
     outline_request: Optional[OutlineRequest] = Body(default=None),
     topic: Optional[str] = Query(None, description="Topic to outline"),
     outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
