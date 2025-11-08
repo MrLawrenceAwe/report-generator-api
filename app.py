@@ -14,28 +14,6 @@ _outline_service = OutlineService()
 _report_service = ReportGeneratorService(outline_service=_outline_service)
 
 
-def _build_outline_request(
-    topic: str,
-    outline_format: str,
-    model_name: Optional[str],
-    reasoning_effort: Optional[ReasoningEffort],
-) -> OutlineRequest:
-    return _outline_service.build_outline_request(topic, outline_format, model_name, reasoning_effort)
-
-
-def _handle_outline_request(outline_request: OutlineRequest):
-    try:
-        return _outline_service.handle_outline_request(outline_request)
-    except OutlineParsingError as exception:
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": f"Failed to parse outline JSON: {exception}",
-                "raw_response": exception.raw_response,
-            },
-        ) from exception
-
-
 @app.api_route("/generate_outline", methods=["GET", "POST"])
 def generate_outline_endpoint(
     outline_request: Optional[OutlineRequest] = Body(default=None),
@@ -47,8 +25,22 @@ def generate_outline_endpoint(
     if outline_request is None:
         if not topic:
             raise HTTPException(status_code=400, detail="Provide a topic via query when no JSON body is supplied.")
-        outline_request = _build_outline_request(topic, outline_format, model, reasoning_effort)
-    return _handle_outline_request(outline_request)
+        outline_request = _outline_service.build_outline_request(
+            topic,
+            outline_format,
+            model,
+            reasoning_effort,
+        )
+    try:
+        return _outline_service.handle_outline_request(outline_request)
+    except OutlineParsingError as exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": f"Failed to parse outline JSON: {exception}",
+                "raw_response": exception.raw_response,
+            },
+        ) from exception
 
 
 @app.post("/generate_report")
