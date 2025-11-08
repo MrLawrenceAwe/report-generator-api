@@ -3,32 +3,31 @@ from __future__ import annotations
 from typing import List, Optional
 
 
-def build_outline_prompt_json(topic: str) -> str:
-    return f"""
-Write a detailed outline for a report on the topic of "{topic}".
-Organize it into main sections (Section 1, Section 2, etc.). Under each main section, list subsections (1.1, 1.2, etc.).
-Make sure it's comprehensive, covering key concepts and sub-topics.
+def _build_outline_prompt_base(topic: str) -> str:
+    return (
+        f"Write a detailed outline for a report on the topic of \"{topic}\".\n"
+        "Organize it into main sections (Section 1, Section 2, etc.). Under each main "
+        "section, list subsections (1.1, 1.2, etc.).\n"
+        "Make sure it's comprehensive, covering key concepts and sub-topics.\n\n"
+    )
 
-Return valid JSON only with this schema:
-{{
+
+def build_outline_prompt_json(topic: str) -> str:
+    return _build_outline_prompt_base(topic) + """Return valid JSON only with this schema:
+{
   "report_title": string,
   "sections": [
-    {{
+    {
       "title": string,
       "subsections": string[]
-    }}
+    }
   ]
-}}
+}
 """
 
 
 def build_outline_prompt_markdown(topic: str) -> str:
-    return f"""
-Write a detailed outline for a report on the topic of "{topic}".
-Organize it into main sections (Section 1, Section 2, etc.). Under each main section, list subsections (1.1, 1.2, etc.).
-Make sure it's comprehensive, covering key concepts and sub-topics.
-
-Return Markdown only.
+    return _build_outline_prompt_base(topic) + """Return Markdown only.
 """
 
 
