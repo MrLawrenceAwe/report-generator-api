@@ -12,17 +12,11 @@ _SUMMARY_KEYWORDS = (
     "overview",
     "executive summary",
 )
+
 def should_elevate_context(section_title: str, subsection_titles: List[str]) -> bool:
-    return _looks_like_summary_or_conclusion(section_title, subsection_titles)
-
-
-def _looks_like_summary_or_conclusion(section_title: str, subsection_titles: List[str]) -> bool:
     candidates = [section_title, *subsection_titles]
-    return any(_contains_summary_keyword(candidate) for candidate in candidates)
-
-
-def _contains_summary_keyword(text: str) -> bool:
-    normalized = text.strip().lower()
-    if not normalized:
-        return False
-    return any(keyword in normalized for keyword in _SUMMARY_KEYWORDS)
+    return any(
+        normalized
+        and any(keyword in normalized for keyword in _SUMMARY_KEYWORDS)
+        for normalized in (candidate.strip().lower() for candidate in candidates)
+    )
