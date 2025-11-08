@@ -107,6 +107,14 @@ def load_payload(payload_file: Path | None, topic: str | None) -> Dict[str, Any]
     return {"topic": topic, "mode": "generate_report"}
 
 
+def _write_text_file(path: Path, contents: str, message: str) -> None:
+    """Write ``contents`` to ``path`` and log ``message``."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(contents, encoding="utf-8")
+    print(message)
+
+
 def main() -> None:
     args = parse_args()
     if args.outline:
@@ -135,9 +143,7 @@ def main() -> None:
                 raise SystemExit("Outline response missing 'markdown_outline'.")
             output_text = markdown.strip() + "\n"
 
-        outfile.parent.mkdir(parents=True, exist_ok=True)
-        outfile.write_text(output_text, encoding="utf-8")
-        print(f"Saved outline to {outfile}")
+        _write_text_file(outfile, output_text, f"Saved outline to {outfile}")
         return
 
     payload = load_payload(args.payload_file, args.topic)
@@ -181,9 +187,7 @@ def main() -> None:
     if not isinstance(report, str):
         raise SystemExit("Final payload did not contain a 'report' field.")
 
-    outfile.parent.mkdir(parents=True, exist_ok=True)
-    outfile.write_text(report, encoding="utf-8")
-    print(f"Saved report to {outfile}")
+    _write_text_file(outfile, report, f"Saved report to {outfile}")
 
 
 if __name__ == "__main__":
