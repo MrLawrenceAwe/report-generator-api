@@ -3,3 +3,4 @@ TODO.md
 client/generated_reports/
 .DS_Store
 __pycache__/
+terminal_command_cheat_sheet.md
