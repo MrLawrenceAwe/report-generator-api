@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 ReasoningEffort = Literal["minimal", "low", "medium", "high"]
 
@@ -56,12 +56,12 @@ class GenerateRequest(BaseModel):
     writer_fallback: Optional[str] = None
     return_: Literal["report", "report_with_outline"] = Field(default="report", alias="return")
 
-    @validator("mode")
-    def validate_mode(cls, v, values):
-        if values.get("topic") and values.get("outline") is None:
-            if v != "generate_report" and v is not None:
+    @model_validator(mode="after")
+    def validate_mode(self):
+        if self.topic and self.outline is None:
+            if self.mode not in (None, "generate_report"):
                 raise ValueError(
                     "When topic-only (Case A) and using /generate_report, mode must be 'generate_report'."
                 )
-        return v
+        return self
 
