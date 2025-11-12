@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .formatting import (
@@ -17,50 +16,25 @@ from .models import (
     OutlineRequest,
     maybe_add_reasoning,
 )
-from .openai_client import call_openai_text_async
+from .openai_client import OpenAITextClient, get_default_text_client
 from .outline_service import OutlineParsingError, OutlineService
 from .prompts import (
     build_section_translator_prompt,
     build_section_writer_prompt,
     build_translation_cleanup_prompt,
 )
+from .report_state import NumberedSection, WrittenSection, WriterState
 from .summary import should_elevate_context
 
 
-@dataclass
-class NumberedSection:
-    title: str
-    subsections: List[str]
-
-
-@dataclass
-class WrittenSection:
-    title: str
-    body: str
-
-
-@dataclass
-class WriterState:
-    primary: ModelSpec
-    fallback: Optional[ModelSpec]
-    active: ModelSpec
-    using_fallback: bool = False
-
-    @classmethod
-    def build(cls, primary: ModelSpec, fallback: Optional[ModelSpec]) -> "WriterState":
-        return cls(primary=primary, fallback=fallback, active=primary)
-
-    def activate_fallback(self) -> bool:
-        if self.fallback and not self.using_fallback:
-            self.using_fallback = True
-            self.active = self.fallback
-            return True
-        return False
-
-
 class ReportGeneratorService:
-    def __init__(self, outline_service: Optional[OutlineService] = None) -> None:
-        self.outline_service = outline_service or OutlineService()
+    def __init__(
+        self,
+        outline_service: Optional[OutlineService] = None,
+        text_client: Optional[OpenAITextClient] = None,
+    ) -> None:
+        self.text_client = text_client or get_default_text_client()
+        self.outline_service = outline_service or OutlineService(text_client=self.text_client)
 
     async def stream_report(self, generate_request: GenerateRequest) -> AsyncGenerator[Dict[str, Any], None]:
         runner = _ReportStreamRunner(self, generate_request)
@@ -89,10 +63,14 @@ class ReportGeneratorService:
         await self._yield_control()
 
 
-@dataclass
 class _ReportStreamRunner:
     service: ReportGeneratorService
     request: GenerateRequest
+
+    def __init__(self, service: ReportGeneratorService, request: GenerateRequest) -> None:
+        self.service = service
+        self.request = request
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         models = self.request.models
@@ -110,6 +88,50 @@ class _ReportStreamRunner:
         async with self.service._emit_status({"status": "started"}) as status:
             yield status
 
+        self._resolved_outline: Optional[Outline] = None
+        outline_gen = self._outline_phase()
+        while True:
+            try:
+                status = await outline_gen.__anext__()
+            except StopAsyncIteration:
+                break
+            else:
+                yield status
+        outline = self._resolved_outline
+        if outline is None:
+            return
+
+        numbered_sections = self.service._build_numbered_sections(outline)
+        all_section_headers = [entry.title for entry in numbered_sections]
+
+        begin_status = self._build_begin_sections_status(outline)
+        async with self.service._emit_status(begin_status) as status:
+            yield status
+
+        self._assembled_narration: Optional[str] = None
+        sections_gen = self._write_sections(outline, numbered_sections, all_section_headers)
+        while True:
+            try:
+                status = await sections_gen.__anext__()
+            except StopAsyncIteration:
+                break
+            else:
+                yield status
+
+        assembled_narration = self._assembled_narration or ""
+
+        final_payload = {
+            "status": "complete",
+            "report_title": outline.report_title,
+            "report": assembled_narration,
+        }
+        if self.request.return_ == "report_with_outline":
+            final_payload["outline_used"] = outline.model_dump()
+
+        async with self.service._emit_status(final_payload) as status:
+            yield status
+
+    async def _outline_phase(self) -> AsyncGenerator[Dict[str, Any], None]:
         provided_outline = self.request.outline
         if provided_outline is None:
             if not self.request.topic:
@@ -126,7 +148,7 @@ class _ReportStreamRunner:
 
             outline_request = OutlineRequest(topic=self.request.topic, model=self.outline_spec)
             try:
-                outline = await asyncio.to_thread(self.service.outline_service.generate_outline, outline_request)
+                outline = await self.service.outline_service.generate_outline(outline_request)
             except OutlineParsingError as exception:  # pragma: no cover - defensive
                 error_status = {
                     "status": "error",
@@ -145,21 +167,24 @@ class _ReportStreamRunner:
             maybe_add_reasoning(outline_ready_status, "reasoning_effort", self.outline_spec)
             async with self.service._emit_status(outline_ready_status) as status:
                 yield status
-        else:
-            outline = provided_outline
-            async with self.service._emit_status(
-                {"status": "using_provided_outline", "sections": len(outline.sections)}
-            ) as status:
-                yield status
+            self._resolved_outline = outline
+            return
 
-        numbered_sections = self.service._build_numbered_sections(outline)
-        all_section_headers = [entry.title for entry in numbered_sections]
-        assembled_narration = outline.report_title
-        written_sections: List[WrittenSection] = []
-
-        begin_status = self._build_begin_sections_status(outline)
-        async with self.service._emit_status(begin_status) as status:
+        async with self.service._emit_status(
+            {"status": "using_provided_outline", "sections": len(provided_outline.sections)}
+        ) as status:
             yield status
+        self._resolved_outline = provided_outline
+        return
+
+    async def _write_sections(
+        self,
+        outline: Outline,
+        numbered_sections: List[NumberedSection],
+        all_section_headers: List[str],
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        written_sections: List[WrittenSection] = []
+        assembled_narration = outline.report_title
 
         for section in numbered_sections:
             section_title = section.title
@@ -169,10 +194,7 @@ class _ReportStreamRunner:
                 yield status
 
             writer_system = "You write high-quality, well-structured prose that continues a report seamlessly."
-            elevate_context = should_elevate_context(section_title, subsection_titles)
-            report_context = None
-            if elevate_context and written_sections:
-                report_context = "\n\n".join(f"{item.title}\n\n{item.body}" for item in written_sections)
+            report_context = self._build_report_context(written_sections, section_title, subsection_titles)
             writer_prompt = build_section_writer_prompt(
                 outline.report_title,
                 all_section_headers,
@@ -180,9 +202,14 @@ class _ReportStreamRunner:
                 subsection_titles,
                 full_report_context=report_context,
             )
+
             while True:
                 try:
-                    section_text = await call_openai_text_async(self.writer_state.active, writer_system, writer_prompt)
+                    section_text = await self.service.text_client.call_text_async(
+                        self.writer_state.active,
+                        writer_system,
+                        writer_prompt,
+                    )
                     break
                 except Exception as exception:
                     fallback_status = self._maybe_activate_writer_fallback(section_title, str(exception))
@@ -191,6 +218,7 @@ class _ReportStreamRunner:
                     async with self.service._emit_status(fallback_status) as status:
                         yield status
                     continue
+
             section_text = enforce_subsection_headings(section_text, subsection_titles)
             written_sections.append(WrittenSection(title=section_title, body=section_text.strip()))
 
@@ -222,17 +250,17 @@ class _ReportStreamRunner:
             async with self.service._emit_status({"status": "section_complete", "section": section_title}) as status:
                 yield status
 
-        final_payload = {
-            "status": "complete",
-            "report_title": outline.report_title,
-            "report": assembled_narration,
-        }
-        if self.request.return_ == "report_with_outline":
-            final_payload["outline_used"] = outline.model_dump()
+        self._assembled_narration = assembled_narration
+        return
 
-        async with self.service._emit_status(final_payload) as status:
-            yield status
-
+    def _build_report_context(
+        self, written_sections: List[WrittenSection], section_title: str, subsection_titles: List[str]
+    ) -> Optional[str]:
+        if not written_sections:
+            return None
+        if not should_elevate_context(section_title, subsection_titles):
+            return None
+        return "\n\n".join(f"{item.title}\n\n{item.body}" for item in written_sections)
 
     def _build_begin_sections_status(self, outline: Outline) -> Dict[str, Any]:
         begin_status: Dict[str, Any] = {
@@ -275,9 +303,17 @@ class _ReportStreamRunner:
             section_text,
             strip_meta=inline_cleanup,
         )
-        return await call_openai_text_async(self.translator_spec, translator_system, translator_prompt)
+        return await self.service.text_client.call_text_async(
+            self.translator_spec,
+            translator_system,
+            translator_prompt,
+        )
 
     async def _cleanup_section(self, report_title: str, section_title: str, narrated: str) -> str:
         cleanup_system = "You remove meta commentary from narrated report sections while keeping content intact."
         cleanup_prompt = build_translation_cleanup_prompt(report_title, section_title, narrated)
-        return await call_openai_text_async(self.cleanup_spec, cleanup_system, cleanup_prompt)
+        return await self.service.text_client.call_text_async(
+            self.cleanup_spec,
+            cleanup_system,
+            cleanup_prompt,
+        )
