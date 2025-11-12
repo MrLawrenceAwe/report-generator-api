@@ -8,28 +8,57 @@ from openai import AsyncOpenAI, OpenAI
 from .models import ModelSpec, supports_reasoning
 
 
-def _make_clients() -> tuple[OpenAI, AsyncOpenAI]:
-    base_url = os.environ.get("OPENAI_BASE_URL")
-    if base_url:
-        return OpenAI(base_url=base_url), AsyncOpenAI(base_url=base_url)
-    return OpenAI(), AsyncOpenAI()
+class OpenAITextClient:
+    """Thin wrapper around OpenAI clients used to send text requests."""
+
+    def __init__(
+        self,
+        sync_client: Optional[OpenAI] = None,
+        async_client: Optional[AsyncOpenAI] = None,
+    ) -> None:
+        self._sync_client = sync_client or self._make_sync_client()
+        self._async_client = async_client or self._make_async_client()
+
+    def call_text(
+        self,
+        model_spec: ModelSpec,
+        system_prompt: str,
+        user_prompt: str,
+        style_hint: Optional[str] = None,
+    ) -> str:
+        response = self._sync_client.responses.create(
+            **_build_request_kwargs(model_spec, system_prompt, user_prompt, style_hint)
+        )
+        return response.output_text
+
+    async def call_text_async(
+        self,
+        model_spec: ModelSpec,
+        system_prompt: str,
+        user_prompt: str,
+        style_hint: Optional[str] = None,
+    ) -> str:
+        response = await self._async_client.responses.create(
+            **_build_request_kwargs(model_spec, system_prompt, user_prompt, style_hint)
+        )
+        return response.output_text
+
+    @staticmethod
+    def _make_sync_client() -> OpenAI:
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        return OpenAI(base_url=base_url) if base_url else OpenAI()
+
+    @staticmethod
+    def _make_async_client() -> AsyncOpenAI:
+        base_url = os.environ.get("OPENAI_BASE_URL")
+        return AsyncOpenAI(base_url=base_url) if base_url else AsyncOpenAI()
 
 
-client, async_client = _make_clients()
+_default_text_client = OpenAITextClient()
 
 
-def call_openai_text(model_spec: ModelSpec, system_prompt: str, user_prompt: str, style_hint: Optional[str] = None) -> str:
-    response = client.responses.create(**_build_request_kwargs(model_spec, system_prompt, user_prompt, style_hint))
-    return response.output_text
-
-
-async def call_openai_text_async(
-    model_spec: ModelSpec, system_prompt: str, user_prompt: str, style_hint: Optional[str] = None
-) -> str:
-    response = await async_client.responses.create(
-        **_build_request_kwargs(model_spec, system_prompt, user_prompt, style_hint)
-    )
-    return response.output_text
+def get_default_text_client() -> OpenAITextClient:
+    return _default_text_client
 
 
 def _build_request_kwargs(

@@ -57,11 +57,11 @@ class GenerateRequest(BaseModel):
     return_: Literal["report", "report_with_outline"] = Field(default="report", alias="return")
 
     @model_validator(mode="after")
-    def validate_mode(self):
-        if self.topic and self.outline is None:
-            if self.mode not in (None, "generate_report"):
-                raise ValueError(
-                    "When topic-only (Case A) and using /generate_report, mode must be 'generate_report'."
-                )
+    def validate_topic_and_mode(self):
+        if self.outline is None:
+            if not self.topic:
+                raise ValueError("Provide a topic when no outline is supplied.")
+            if self.mode != "generate_report":
+                raise ValueError("When generating from a topic, mode must be 'generate_report'.")
         return self
 
