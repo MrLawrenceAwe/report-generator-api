@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from .formatting import parse_outline_json
-from .models import Outline, OutlineRequest, ModelSpec, ReasoningEffort, supports_reasoning
+from .models import (
+    DEFAULT_TEXT_MODEL,
+    ModelSpec,
+    Outline,
+    OutlineRequest,
+    ReasoningEffort,
+    supports_reasoning,
+)
 from .openai_client import OpenAITextClient, get_default_text_client
 from .prompts import build_outline_prompt_json, build_outline_prompt_markdown
 
@@ -21,7 +28,7 @@ class OutlineService:
         model_name: Optional[str],
         reasoning_effort: Optional[ReasoningEffort],
     ) -> OutlineRequest:
-        model_spec = ModelSpec(model=model_name or "gpt-4o-mini")
+        model_spec = ModelSpec(model=model_name or DEFAULT_TEXT_MODEL)
         if reasoning_effort and supports_reasoning(model_spec.model):
             model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
         return OutlineRequest(topic=topic, format=outline_format, model=model_spec)

@@ -10,6 +10,7 @@ from .formatting import (
     enforce_subsection_headings,
 )
 from .models import (
+    DEFAULT_TEXT_MODEL,
     GenerateRequest,
     ModelSpec,
     Outline,
@@ -86,9 +87,9 @@ class _ReportStreamRunner:
 
     def __post_init__(self) -> None:
         models = self.request.models
-        self.outline_spec = models.get("outline", ModelSpec(model="gpt-4o-mini"))
-        self.writer_spec = models.get("writer", ModelSpec(model="gpt-4o-mini"))
-        self.translator_spec = models.get("translator", ModelSpec(model="gpt-4o-mini"))
+        self.outline_spec = models.get("outline", ModelSpec(model=DEFAULT_TEXT_MODEL))
+        self.writer_spec = models.get("writer", ModelSpec(model=DEFAULT_TEXT_MODEL))
+        self.translator_spec = models.get("translator", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.cleanup_spec = models.get("cleanup", self.translator_spec)
         self.writer_state = WriterState.build(
             self.writer_spec,

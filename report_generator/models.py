@@ -8,9 +8,11 @@ ReasoningEffort = Literal["minimal", "low", "medium", "high"]
 
 _REASONING_MODEL_PREFIXES = ("gpt-5", "o3", "o4")
 
+DEFAULT_TEXT_MODEL = "gpt-4o-mini"
+
 
 class ModelSpec(BaseModel):
-    model: str = Field(default="gpt-4o-mini", description="Model name, e.g., gpt-4o-mini, gpt-4o")
+    model: str = Field(default=DEFAULT_TEXT_MODEL, description="Model name, e.g., gpt-4o-mini, gpt-4o")
     reasoning_effort: Optional[ReasoningEffort] = Field(default=None, description="Reasoning effort for reasoning models")
 
 
@@ -38,7 +40,7 @@ class Outline(BaseModel):
 class OutlineRequest(BaseModel):
     topic: str
     format: Literal["json", "markdown"] = "json"
-    model: ModelSpec = ModelSpec(model="gpt-4o-mini")
+    model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
 
 
 class GenerateRequest(BaseModel):
@@ -47,9 +49,9 @@ class GenerateRequest(BaseModel):
     outline: Optional[Outline] = None
     models: Dict[str, ModelSpec] = Field(
         default_factory=lambda: {
-            "outline": ModelSpec(model="gpt-4o-mini"),
-            "writer": ModelSpec(model="gpt-4o-mini"),
-            "translator": ModelSpec(model="gpt-4o-mini"),
+            "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
+            "writer": ModelSpec(model=DEFAULT_TEXT_MODEL),
+            "translator": ModelSpec(model=DEFAULT_TEXT_MODEL),
             "cleanup": ModelSpec(model="gpt-5-nano"),
         }
     )
