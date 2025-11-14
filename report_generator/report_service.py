@@ -100,6 +100,7 @@ class _ReportStreamRunner:
             ),
         )
         self.cleanup_required = self.cleanup_spec.model != self.translator_spec.model
+        self._encountered_error = False
 
     async def run(self) -> AsyncGenerator[Dict[str, Any], None]:
         async with self.service._emit_status({"status": "started"}) as status:
@@ -124,6 +125,9 @@ class _ReportStreamRunner:
             outline, numbered_sections, all_section_headers
         ):
             yield status
+
+        if self._encountered_error:
+            return
 
         assembled_narration = self._assembled_narration or ""
 
@@ -256,12 +260,23 @@ class _ReportStreamRunner:
                 {"status": "translating_section", "section": section_title}
             ) as status:
                 yield status
-            narrated = await self._translate_section(
-                outline.report_title,
-                section_title,
-                section_text,
-                inline_cleanup=not self.cleanup_required,
-            )
+            try:
+                narrated = await self._translate_section(
+                    outline.report_title,
+                    section_title,
+                    section_text,
+                    inline_cleanup=not self.cleanup_required,
+                )
+            except Exception as exception:
+                self._encountered_error = True
+                error_status = {
+                    "status": "error",
+                    "section": section_title,
+                    "detail": f"Failed to translate section '{section_title}': {exception}",
+                }
+                async with self.service._emit_status(error_status) as status:
+                    yield status
+                return
 
             cleaned_narration = narrated
             if self.cleanup_required:
@@ -269,11 +284,22 @@ class _ReportStreamRunner:
                     {"status": "cleaning_section", "section": section_title}
                 ) as status:
                     yield status
-                cleaned_narration = await self._cleanup_section(
-                    outline.report_title,
-                    section_title,
-                    narrated,
-                )
+                try:
+                    cleaned_narration = await self._cleanup_section(
+                        outline.report_title,
+                        section_title,
+                        narrated,
+                    )
+                except Exception as exception:
+                    self._encountered_error = True
+                    error_status = {
+                        "status": "error",
+                        "section": section_title,
+                        "detail": f"Failed to clean section '{section_title}': {exception}",
+                    }
+                    async with self.service._emit_status(error_status) as status:
+                        yield status
+                    return
 
             cleaned_narration = enforce_subsection_headings(
                 cleaned_narration, subsection_titles

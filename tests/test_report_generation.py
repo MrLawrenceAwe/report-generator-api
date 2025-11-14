@@ -33,7 +33,10 @@ class StubTextClient:
         self.calls.append((model_spec.model, system_prompt, user_prompt))
         if not self._responses:
             raise AssertionError("No more stubbed responses available")
-        return self._responses.pop(0)
+        response = self._responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 class DummyOutlineService:
@@ -111,6 +114,110 @@ def test_report_generator_stream_produces_complete_report():
 
     call_models = [model for model, *_ in stub_text_client.calls]
     assert call_models == ["writer-model", "translator-model", "cleanup-model"]
+
+
+def test_report_generator_translation_failure_emits_error_event():
+    outline = Outline(
+        report_title="Insights",
+        sections=[Section(title="Background", subsections=["Overview"])],
+    )
+    stub_text_client = StubTextClient(
+        [
+            "### Overview\nWriter body",
+            RuntimeError("translator boom"),
+        ]
+    )
+    service = ReportGeneratorService(
+        outline_service=DummyOutlineService(),
+        text_client=stub_text_client,
+    )
+    request = GenerateRequest.model_validate(
+        {
+            "outline": outline.model_dump(),
+            "models": {
+                "outline": {"model": "outline-model"},
+                "writer": {"model": "writer-model"},
+                "translator": {"model": "translator-model"},
+                "cleanup": {"model": "translator-model"},
+            },
+        }
+    )
+
+    events = []
+
+    async def collect_events():
+        async for event in service.stream_report(request):
+            events.append(event)
+
+    asyncio.run(collect_events())
+
+    statuses = [event["status"] for event in events]
+    assert statuses == [
+        "started",
+        "using_provided_outline",
+        "begin_sections",
+        "writing_section",
+        "translating_section",
+        "error",
+    ]
+
+    final_event = events[-1]
+    assert "translator boom" in final_event["detail"]
+    assert final_event["section"] == "1: Background"
+    assert len(stub_text_client.calls) == 2
+
+
+def test_report_generator_cleanup_failure_emits_error_event():
+    outline = Outline(
+        report_title="Insights",
+        sections=[Section(title="Background", subsections=["Overview"])],
+    )
+    stub_text_client = StubTextClient(
+        [
+            "### Overview\nWriter body",
+            "### Overview\nTranslated body",
+            RuntimeError("cleanup boom"),
+        ]
+    )
+    service = ReportGeneratorService(
+        outline_service=DummyOutlineService(),
+        text_client=stub_text_client,
+    )
+    request = GenerateRequest.model_validate(
+        {
+            "outline": outline.model_dump(),
+            "models": {
+                "outline": {"model": "outline-model"},
+                "writer": {"model": "writer-model"},
+                "translator": {"model": "translator-model"},
+                "cleanup": {"model": "cleanup-model"},
+            },
+        }
+    )
+
+    events = []
+
+    async def collect_events():
+        async for event in service.stream_report(request):
+            events.append(event)
+
+    asyncio.run(collect_events())
+
+    statuses = [event["status"] for event in events]
+    assert statuses == [
+        "started",
+        "using_provided_outline",
+        "begin_sections",
+        "writing_section",
+        "translating_section",
+        "cleaning_section",
+        "error",
+    ]
+
+    final_event = events[-1]
+    assert "cleanup boom" in final_event["detail"]
+    assert final_event["section"] == "1: Background"
+    assert len(stub_text_client.calls) == 3
 
 
 def test_report_generator_processes_multiple_sections_with_minimal_outline():
