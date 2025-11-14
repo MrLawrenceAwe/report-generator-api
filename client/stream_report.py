@@ -101,7 +101,12 @@ def _infer_topic(payload: Dict[str, Any]) -> str | None:
 def load_payload(payload_file: Path | None, topic: str | None) -> Dict[str, Any]:
     if payload_file is not None:
         text = payload_file.read_text(encoding="utf-8")
-        return json.loads(text)
+        data = json.loads(text)
+        if not isinstance(data, dict):
+            raise SystemExit(
+                "Payload file must contain a JSON object (mapping of field names to values)."
+            )
+        return data
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
     return {"topic": topic, "mode": "generate_report"}
