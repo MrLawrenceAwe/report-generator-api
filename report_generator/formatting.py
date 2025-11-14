@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from json import JSONDecodeError, JSONDecoder
 from typing import List
 
 from .models import Outline
@@ -60,8 +61,6 @@ def enforce_subsection_headings(section_text: str, subsection_titles: List[str])
 
 
 def parse_outline_json(text: str) -> Outline:
-    from json import loads
-
     cleaned = text.strip()
     if cleaned.startswith("```") and cleaned.endswith("```"):
         cleaned = cleaned.strip("`").strip()
@@ -69,5 +68,19 @@ def parse_outline_json(text: str) -> Outline:
         if newline != -1:
             cleaned = cleaned[newline + 1 :].strip()
 
-    data = loads(cleaned)
-    return Outline(**data)
+    decoder = JSONDecoder()
+
+    def _decode(candidate: str) -> Outline:
+        data, _ = decoder.raw_decode(candidate)
+        return Outline(**data)
+
+    try:
+        return _decode(cleaned)
+    except JSONDecodeError:
+        first_brace = cleaned.find("{")
+        if first_brace > 0:
+            try:
+                return _decode(cleaned[first_brace:])
+            except JSONDecodeError:
+                pass
+        raise
