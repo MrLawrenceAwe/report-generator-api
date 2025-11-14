@@ -41,6 +41,7 @@ uvicorn app:app --reload --port 8000
 ## Run the helper client
 
 `client/stream_report.py` streams status updates to your terminal, saves finished artifacts under `client/generated_reports/`, and can optionally persist the raw NDJSON stream. It simply hits the API endpoint you configure (default `http://localhost:8000/generate_report`), so no OpenAI credential is required unless the server you are pointing at expects one in its own environment. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
+Add `--sections 4` (or any positive integer) to the outline/report commands below when you want to force the generated outline to contain exactly four main sections.
 
 ### Outline from a topic
 
@@ -98,6 +99,7 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 ```jsonc
 {
   "topic": "Supply chain resilience in 2025",
+  "sections": 4,                   // optional: force this many main sections
   "format": "json",                 // "json" (default) or "markdown"
   "model": {
     "model": "gpt-4o-mini"         // default
@@ -117,6 +119,7 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 ```
 
 > Switch `format` to `markdown` to receive a Markdown outline instead. Provide the same parameters as query string values for the GET variant.
+> The `sections` field works with both JSON bodies and GET query params.
 
 ### `/generate_report` request
 
@@ -153,6 +156,7 @@ python client/stream_report.py --topic "Modern Data Governance for AI Teams" --s
 ```
 
 Reports come back as plain text headed by the title line, followed by numbered sections (`1:`) and subsections (`1.1:`) for easy narration.
+When you omit the `outline` block, include `sections` in your payload to have the auto-generated outline honor that exact count.
 
 ---
 

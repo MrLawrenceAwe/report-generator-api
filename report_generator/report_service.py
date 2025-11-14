@@ -164,7 +164,9 @@ class _ReportStreamRunner:
                 yield status
 
             outline_request = OutlineRequest(
-                topic=self.request.topic, model=self.outline_spec
+                topic=self.request.topic,
+                model=self.outline_spec,
+                sections=self.request.sections,
             )
             try:
                 outline = await self.service.outline_service.generate_outline(

@@ -1,6 +1,7 @@
 {
   "topic": "Modern data governance for AI teams",
   "mode": "generate_report",
+  "sections": 4,
   "models": {
     "outline": {
       "model": "gpt-4o-mini"

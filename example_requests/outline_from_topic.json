@@ -1,5 +1,6 @@
 {
   "topic": "Modern data governance for AI teams",
+  "sections": 4,
   "format": "json",
   "model": {
     "model": "gpt-4o-mini"

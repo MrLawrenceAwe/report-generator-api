@@ -41,6 +41,11 @@ class OutlineRequest(BaseModel):
     topic: str
     format: Literal["json", "markdown"] = "json"
     model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
+    sections: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Force the outline to contain exactly this many main sections.",
+    )
 
     @model_validator(mode="after")
     def validate_topic(self):
@@ -55,6 +60,11 @@ class GenerateRequest(BaseModel):
     topic: Optional[str] = None
     mode: Optional[Literal["generate_report"]] = None
     outline: Optional[Outline] = None
+    sections: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="When no outline is provided, request an outline with this many sections.",
+    )
     models: Dict[str, ModelSpec] = Field(
         default_factory=lambda: {
             "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
@@ -76,4 +86,3 @@ class GenerateRequest(BaseModel):
             if self.mode != "generate_report":
                 raise ValueError("When generating from a topic, mode must be 'generate_report'.")
         return self
-

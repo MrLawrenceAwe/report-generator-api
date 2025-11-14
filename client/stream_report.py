@@ -64,6 +64,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print each streamed event to stdout as it arrives.",
     )
+    parser.add_argument(
+        "--sections",
+        type=int,
+        help="Force outlines or generated reports to contain exactly this many main sections.",
+    )
     return parser.parse_args()
 
 
@@ -98,7 +103,7 @@ def _infer_topic(payload: Dict[str, Any]) -> str | None:
     return None
 
 
-def load_payload(payload_file: Path | None, topic: str | None) -> Dict[str, Any]:
+def load_payload(payload_file: Path | None, topic: str | None, sections: int | None = None) -> Dict[str, Any]:
     if payload_file is not None:
         text = payload_file.read_text(encoding="utf-8")
         data = json.loads(text)
@@ -106,10 +111,15 @@ def load_payload(payload_file: Path | None, topic: str | None) -> Dict[str, Any]
             raise SystemExit(
                 "Payload file must contain a JSON object (mapping of field names to values)."
             )
+        if sections is not None:
+            data["sections"] = sections
         return data
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
-    return {"topic": topic, "mode": "generate_report"}
+    payload: Dict[str, Any] = {"topic": topic, "mode": "generate_report"}
+    if sections is not None:
+        payload["sections"] = sections
+    return payload
 
 
 def _write_text_file(path: Path, contents: str, message: str, show_message: bool = True) -> None:
@@ -122,6 +132,8 @@ def _write_text_file(path: Path, contents: str, message: str, show_message: bool
 
 def main() -> None:
     args = parse_args()
+    if args.sections is not None and args.sections < 1:
+        raise SystemExit("--sections must be greater than or equal to 1.")
     if args.outline:
         if args.topic is None:
             raise SystemExit("Provide --topic when requesting an outline.")
@@ -134,6 +146,8 @@ def main() -> None:
             outfile = _default_outfile(args.topic, "outline", args.format)
 
         params: Dict[str, Any] = {"topic": args.topic, "format": args.format}
+        if args.sections is not None:
+            params["sections"] = args.sections
 
         with httpx.Client(timeout=None) as client:
             response = client.get(target, params=params)
@@ -151,7 +165,7 @@ def main() -> None:
         _write_text_file(outfile, output_text, f"Saved outline to {outfile}")
         return
 
-    payload = load_payload(args.payload_file, args.topic)
+    payload = load_payload(args.payload_file, args.topic, sections=args.sections)
 
     inferred_topic = _infer_topic(payload)
     default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else GENERATED_REPORTS_DIR / 'report.md'

@@ -29,6 +29,11 @@ async def generate_outline_endpoint(
     outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
     model: Optional[str] = Query(None, description="Model name override"),
     reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
+    sections: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Force the outline to include exactly this many main sections.",
+    ),
     outline_service: OutlineService = Depends(get_outline_service),
 ):
     if outline_request is None:
@@ -43,6 +48,7 @@ async def generate_outline_endpoint(
                 outline_format,
                 model,
                 reasoning_effort,
+                sections=sections,
             )
         except ValueError as exception:
             raise HTTPException(status_code=400, detail=str(exception)) from exception

@@ -27,6 +27,7 @@ class OutlineService:
         outline_format: str,
         model_name: Optional[str],
         reasoning_effort: Optional[ReasoningEffort],
+        sections: Optional[int] = None,
     ) -> OutlineRequest:
         normalized_topic = topic.strip()
         if not normalized_topic:
@@ -34,7 +35,12 @@ class OutlineService:
         model_spec = ModelSpec(model=model_name or DEFAULT_TEXT_MODEL)
         if reasoning_effort and supports_reasoning(model_spec.model):
             model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
-        return OutlineRequest(topic=normalized_topic, format=outline_format, model=model_spec)
+        return OutlineRequest(
+            topic=normalized_topic,
+            format=outline_format,
+            model=model_spec,
+            sections=sections,
+        )
 
     async def handle_outline_request(self, outline_request: OutlineRequest) -> Dict[str, Any]:
         text = await self._request_outline_text(outline_request)
@@ -52,9 +58,9 @@ class OutlineService:
     async def _request_outline_text(self, outline_request: OutlineRequest) -> str:
         system = "You generate structured outlines."
         prompt = (
-            build_outline_prompt_json(outline_request.topic)
+            build_outline_prompt_json(outline_request.topic, outline_request.sections)
             if outline_request.format == "json"
-            else build_outline_prompt_markdown(outline_request.topic)
+            else build_outline_prompt_markdown(outline_request.topic, outline_request.sections)
         )
         return await self._text_client.call_text_async(outline_request.model, system, prompt)
 

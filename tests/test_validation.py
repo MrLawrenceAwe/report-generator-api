@@ -18,11 +18,26 @@ def test_generate_request_strips_topic_whitespace():
     assert request.topic == "Quantum Computing"
 
 
+def test_generate_request_accepts_sections_hint():
+    request = GenerateRequest.model_validate(
+        {"topic": "Quantum Computing", "mode": "generate_report", "sections": 3}
+    )
+
+    assert request.sections == 3
+
+
 def test_outline_request_rejects_blank_topic():
     with pytest.raises(ValidationError) as excinfo:
         OutlineRequest.model_validate({"topic": "   "})
 
     assert "non-whitespace" in str(excinfo.value)
+
+
+def test_outline_request_rejects_invalid_sections():
+    with pytest.raises(ValidationError) as excinfo:
+        OutlineRequest.model_validate({"topic": "AI Safety", "sections": 0})
+
+    assert "greater than or equal to 1" in str(excinfo.value)
 
 
 def test_outline_service_build_outline_request_strips_topic():
@@ -34,6 +49,18 @@ def test_outline_service_build_outline_request_strips_topic():
     )
 
     assert outline_request.topic == "Climate Adaptation"
+
+
+def test_outline_service_build_outline_request_applies_sections():
+    outline_request = OutlineService.build_outline_request(
+        "  Climate Adaptation  ",
+        "json",
+        model_name=None,
+        reasoning_effort=None,
+        sections=4,
+    )
+
+    assert outline_request.sections == 4
 
 
 def test_outline_service_build_outline_request_rejects_blank_topic():

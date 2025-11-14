@@ -3,17 +3,20 @@ from __future__ import annotations
 from typing import List, Optional
 
 
-def _build_outline_prompt_base(topic: str) -> str:
-    return (
-        f"Write a detailed outline for a report on the topic of \"{topic}\".\n"
+def _build_outline_prompt_base(topic: str, sections: Optional[int] = None) -> str:
+    instructions = [
+        f"Write a detailed outline for a report on the topic of \"{topic}\".",
         "Organize it into main sections (Section 1, Section 2, etc.). Under each main "
-        "section, list subsections (1.1, 1.2, etc.).\n"
-        "Make sure it's comprehensive, covering key concepts and sub-topics.\n\n"
-    )
+        "section, list subsections (1.1, 1.2, etc.).",
+        "Make sure it's comprehensive, covering key concepts and sub-topics.",
+    ]
+    if sections:
+        instructions.append(f"Create exactly {sections} main sections.")
+    return "\n".join(instructions) + "\n\n"
 
 
-def build_outline_prompt_json(topic: str) -> str:
-    return _build_outline_prompt_base(topic) + """Return valid JSON only with this schema:
+def build_outline_prompt_json(topic: str, sections: Optional[int] = None) -> str:
+    return _build_outline_prompt_base(topic, sections) + """Return valid JSON only with this schema:
 {
   "report_title": string,
   "sections": [
@@ -26,8 +29,8 @@ def build_outline_prompt_json(topic: str) -> str:
 """
 
 
-def build_outline_prompt_markdown(topic: str) -> str:
-    return _build_outline_prompt_base(topic) + """Return Markdown only.
+def build_outline_prompt_markdown(topic: str, sections: Optional[int] = None) -> str:
+    return _build_outline_prompt_base(topic, sections) + """Return Markdown only.
 """
 
 
