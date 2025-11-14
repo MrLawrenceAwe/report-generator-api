@@ -267,7 +267,11 @@ class _ReportStreamRunner:
                     section_text,
                     inline_cleanup=not self.cleanup_required,
                 )
-            except Exception as exception:
+            except BaseException as exception:
+                if isinstance(exception, asyncio.CancelledError) or not isinstance(
+                    exception, Exception
+                ):
+                    raise
                 self._encountered_error = True
                 error_status = {
                     "status": "error",
@@ -290,7 +294,11 @@ class _ReportStreamRunner:
                         section_title,
                         narrated,
                     )
-                except Exception as exception:
+                except BaseException as exception:
+                    if isinstance(exception, asyncio.CancelledError) or not isinstance(
+                        exception, Exception
+                    ):
+                        raise
                     self._encountered_error = True
                     error_status = {
                         "status": "error",
