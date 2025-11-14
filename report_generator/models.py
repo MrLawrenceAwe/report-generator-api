@@ -42,6 +42,14 @@ class OutlineRequest(BaseModel):
     format: Literal["json", "markdown"] = "json"
     model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
 
+    @model_validator(mode="after")
+    def validate_topic(self):
+        topic = self.topic.strip()
+        if not topic:
+            raise ValueError("Topic must contain non-whitespace characters.")
+        self.topic = topic
+        return self
+
 
 class GenerateRequest(BaseModel):
     topic: Optional[str] = None
@@ -61,8 +69,10 @@ class GenerateRequest(BaseModel):
     @model_validator(mode="after")
     def validate_topic_and_mode(self):
         if self.outline is None:
-            if not self.topic:
-                raise ValueError("Provide a topic when no outline is supplied.")
+            topic = self.topic.strip() if isinstance(self.topic, str) else ""
+            if not topic:
+                raise ValueError("Provide a non-empty topic when no outline is supplied.")
+            self.topic = topic
             if self.mode != "generate_report":
                 raise ValueError("When generating from a topic, mode must be 'generate_report'.")
         return self

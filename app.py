@@ -32,14 +32,20 @@ async def generate_outline_endpoint(
     outline_service: OutlineService = Depends(get_outline_service),
 ):
     if outline_request is None:
-        if not topic:
-            raise HTTPException(status_code=400, detail="Provide a topic via query when no JSON body is supplied.")
-        outline_request = outline_service.build_outline_request(
-            topic,
-            outline_format,
-            model,
-            reasoning_effort,
-        )
+        if topic is None or not topic.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Provide a non-empty topic via query when no JSON body is supplied.",
+            )
+        try:
+            outline_request = outline_service.build_outline_request(
+                topic,
+                outline_format,
+                model,
+                reasoning_effort,
+            )
+        except ValueError as exception:
+            raise HTTPException(status_code=400, detail=str(exception)) from exception
     try:
         return await outline_service.handle_outline_request(outline_request)
     except OutlineParsingError as exception:

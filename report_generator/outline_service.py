@@ -28,10 +28,13 @@ class OutlineService:
         model_name: Optional[str],
         reasoning_effort: Optional[ReasoningEffort],
     ) -> OutlineRequest:
+        normalized_topic = topic.strip()
+        if not normalized_topic:
+            raise ValueError("Topic must contain non-whitespace characters.")
         model_spec = ModelSpec(model=model_name or DEFAULT_TEXT_MODEL)
         if reasoning_effort and supports_reasoning(model_spec.model):
             model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
-        return OutlineRequest(topic=topic, format=outline_format, model=model_spec)
+        return OutlineRequest(topic=normalized_topic, format=outline_format, model=model_spec)
 
     async def handle_outline_request(self, outline_request: OutlineRequest) -> Dict[str, Any]:
         text = await self._request_outline_text(outline_request)
