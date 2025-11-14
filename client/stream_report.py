@@ -112,12 +112,12 @@ def load_payload(payload_file: Path | None, topic: str | None) -> Dict[str, Any]
     return {"topic": topic, "mode": "generate_report"}
 
 
-def _write_text_file(path: Path, contents: str, message: str) -> None:
-    """Write ``contents`` to ``path`` and log ``message``."""
-
+def _write_text_file(path: Path, contents: str, message: str, show_message: bool = True) -> None:
+    """Write ``contents`` to ``path`` and optionally log ``message``."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(contents, encoding="utf-8")
-    print(message)
+    if show_message:
+        print(message)
 
 
 def main() -> None:
@@ -192,7 +192,7 @@ def main() -> None:
     if not isinstance(report, str):
         raise SystemExit("Final payload did not contain a 'report' field.")
 
-    _write_text_file(outfile, report, f"Saved report to {outfile}")
+    _write_text_file(outfile, report, f"Report generation complete. Saved to {outfile}")
 
 
 if __name__ == "__main__":
