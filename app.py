@@ -1,6 +1,6 @@
 import json
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -34,6 +34,14 @@ async def generate_outline_endpoint(
         ge=1,
         description="Force the outline to include exactly this many main sections.",
     ),
+    subject_inclusions: Optional[List[str]] = Query(
+        None,
+        description="Subjects the outline must cover. Defaults to none.",
+    ),
+    subject_exclusions: Optional[List[str]] = Query(
+        None,
+        description="Subjects to avoid entirely. Defaults to none.",
+    ),
     outline_service: OutlineService = Depends(get_outline_service),
 ):
     if outline_request is None:
@@ -49,6 +57,8 @@ async def generate_outline_endpoint(
                 model,
                 reasoning_effort,
                 sections=sections,
+                subject_inclusions=subject_inclusions,
+                subject_exclusions=subject_exclusions,
             )
         except ValueError as exception:
             raise HTTPException(status_code=400, detail=str(exception)) from exception

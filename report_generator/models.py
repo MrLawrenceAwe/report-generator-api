@@ -37,10 +37,28 @@ class Outline(BaseModel):
     sections: List[Section]
 
 
+def _normalize_subjects(values: List[str], field_name: str) -> List[str]:
+    normalized: List[str] = []
+    for subject in values:
+        cleaned = subject.strip()
+        if not cleaned:
+            raise ValueError(f"{field_name} entries must contain non-whitespace characters.")
+        normalized.append(cleaned)
+    return normalized
+
+
 class OutlineRequest(BaseModel):
     topic: str
     format: Literal["json", "markdown"] = "json"
     model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
+    subject_inclusions: List[str] = Field(
+        default_factory=list,
+        description="Subjects that must be covered; defaults to none.",
+    )
+    subject_exclusions: List[str] = Field(
+        default_factory=list,
+        description="Subjects that must be avoided; defaults to none.",
+    )
     sections: Optional[int] = Field(
         default=None,
         ge=1,
@@ -53,6 +71,12 @@ class OutlineRequest(BaseModel):
         if not topic:
             raise ValueError("Topic must contain non-whitespace characters.")
         self.topic = topic
+        self.subject_inclusions = _normalize_subjects(
+            self.subject_inclusions, "subject_inclusions"
+        )
+        self.subject_exclusions = _normalize_subjects(
+            self.subject_exclusions, "subject_exclusions"
+        )
         return self
 
 
@@ -60,6 +84,14 @@ class GenerateRequest(BaseModel):
     topic: Optional[str] = None
     mode: Optional[Literal["generate_report"]] = None
     outline: Optional[Outline] = None
+    subject_inclusions: List[str] = Field(
+        default_factory=list,
+        description="Subjects that must be covered; defaults to none.",
+    )
+    subject_exclusions: List[str] = Field(
+        default_factory=list,
+        description="Subjects that must be avoided; defaults to none.",
+    )
     sections: Optional[int] = Field(
         default=None,
         ge=1,
@@ -78,6 +110,12 @@ class GenerateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_topic_and_mode(self):
+        self.subject_inclusions = _normalize_subjects(
+            self.subject_inclusions, "subject_inclusions"
+        )
+        self.subject_exclusions = _normalize_subjects(
+            self.subject_exclusions, "subject_exclusions"
+        )
         if self.outline is None:
             topic = self.topic.strip() if isinstance(self.topic, str) else ""
             if not topic:

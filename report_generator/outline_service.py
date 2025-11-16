@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from .formatting import parse_outline_json
 from .models import (
@@ -28,6 +28,8 @@ class OutlineService:
         model_name: Optional[str],
         reasoning_effort: Optional[ReasoningEffort],
         sections: Optional[int] = None,
+        subject_inclusions: Optional[List[str]] = None,
+        subject_exclusions: Optional[List[str]] = None,
     ) -> OutlineRequest:
         normalized_topic = topic.strip()
         if not normalized_topic:
@@ -40,6 +42,8 @@ class OutlineService:
             format=outline_format,
             model=model_spec,
             sections=sections,
+            subject_inclusions=subject_inclusions or [],
+            subject_exclusions=subject_exclusions or [],
         )
 
     async def handle_outline_request(self, outline_request: OutlineRequest) -> Dict[str, Any]:
@@ -58,9 +62,19 @@ class OutlineService:
     async def _request_outline_text(self, outline_request: OutlineRequest) -> str:
         system = "You generate structured outlines."
         prompt = (
-            build_outline_prompt_json(outline_request.topic, outline_request.sections)
+            build_outline_prompt_json(
+                outline_request.topic,
+                outline_request.sections,
+                outline_request.subject_inclusions,
+                outline_request.subject_exclusions,
+            )
             if outline_request.format == "json"
-            else build_outline_prompt_markdown(outline_request.topic, outline_request.sections)
+            else build_outline_prompt_markdown(
+                outline_request.topic,
+                outline_request.sections,
+                outline_request.subject_inclusions,
+                outline_request.subject_exclusions,
+            )
         )
         return await self._text_client.call_text_async(outline_request.model, system, prompt)
 

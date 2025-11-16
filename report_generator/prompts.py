@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import List, Optional
 
 
-def _build_outline_prompt_base(topic: str, sections: Optional[int] = None) -> str:
+def _build_outline_prompt_base(
+    topic: str,
+    sections: Optional[int] = None,
+    subject_inclusions: Optional[List[str]] = None,
+    subject_exclusions: Optional[List[str]] = None,
+) -> str:
     instructions = [
         f"Write a detailed outline for a report on the topic of \"{topic}\".",
         "Organize it into main sections (Section 1, Section 2, etc.). Under each main "
@@ -12,11 +17,27 @@ def _build_outline_prompt_base(topic: str, sections: Optional[int] = None) -> st
     ]
     if sections:
         instructions.append(f"Create exactly {sections} main sections.")
+    if subject_inclusions:
+        inclusions_text = ", ".join(subject_inclusions)
+        instructions.append(f"Ensure these subjects are covered in the outline: {inclusions_text}.")
+    if subject_exclusions:
+        exclusions_text = ", ".join(subject_exclusions)
+        instructions.append(f"Avoid these subjects: {exclusions_text}.")
     return "\n".join(instructions) + "\n\n"
 
 
-def build_outline_prompt_json(topic: str, sections: Optional[int] = None) -> str:
-    return _build_outline_prompt_base(topic, sections) + """Return valid JSON only with this schema:
+def build_outline_prompt_json(
+    topic: str,
+    sections: Optional[int] = None,
+    subject_inclusions: Optional[List[str]] = None,
+    subject_exclusions: Optional[List[str]] = None,
+) -> str:
+    return _build_outline_prompt_base(
+        topic,
+        sections,
+        subject_inclusions,
+        subject_exclusions,
+    ) + """Return valid JSON only with this schema:
 {
   "report_title": string,
   "sections": [
@@ -29,8 +50,18 @@ def build_outline_prompt_json(topic: str, sections: Optional[int] = None) -> str
 """
 
 
-def build_outline_prompt_markdown(topic: str, sections: Optional[int] = None) -> str:
-    return _build_outline_prompt_base(topic, sections) + """Return Markdown only.
+def build_outline_prompt_markdown(
+    topic: str,
+    sections: Optional[int] = None,
+    subject_inclusions: Optional[List[str]] = None,
+    subject_exclusions: Optional[List[str]] = None,
+) -> str:
+    return _build_outline_prompt_base(
+        topic,
+        sections,
+        subject_inclusions,
+        subject_exclusions,
+    ) + """Return Markdown only.
 """
 
 
@@ -93,7 +124,11 @@ Section body to translate:
 """
 
 
-def build_translation_cleanup_prompt(report_title: str, section_title: str, translated_text: str) -> str:
+def build_translation_cleanup_prompt(
+    report_title: str,
+    section_title: str,
+    translated_text: str,
+) -> str:
     narration = translated_text.strip() or "(no narration)"
     return f"""
 You polish narrated report sections. Remove any meta commentary, translator disclaimers, filler like "Sure, here is" or "Translating now", and any content outside the narration itself. Preserve every heading exactly as provided (e.g., `1.1: ...`) and keep the factual narration untouched.

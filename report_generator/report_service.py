@@ -167,6 +167,8 @@ class _ReportStreamRunner:
                 topic=self.request.topic,
                 model=self.outline_spec,
                 sections=self.request.sections,
+                subject_inclusions=self.request.subject_inclusions,
+                subject_exclusions=self.request.subject_exclusions,
             )
             try:
                 outline = await self.service.outline_service.generate_outline(
@@ -397,7 +399,9 @@ class _ReportStreamRunner:
     ) -> str:
         cleanup_system = "You remove meta commentary from narrated report sections while keeping content intact."
         cleanup_prompt = build_translation_cleanup_prompt(
-            report_title, section_title, narrated
+            report_title,
+            section_title,
+            narrated,
         )
         return await self.service.text_client.call_text_async(
             self.cleanup_spec,

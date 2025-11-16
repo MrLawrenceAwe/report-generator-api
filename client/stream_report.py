@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 import re
 
@@ -69,6 +69,18 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Force outlines or generated reports to contain exactly this many main sections.",
     )
+    parser.add_argument(
+        "--subject-inclusion",
+        dest="subject_inclusions",
+        action="append",
+        help="Require the outline/report to cover this subject. Pass multiple times for multiple subjects.",
+    )
+    parser.add_argument(
+        "--subject-exclusion",
+        dest="subject_exclusions",
+        action="append",
+        help="Avoid this subject entirely. Pass multiple times for multiple subjects.",
+    )
     return parser.parse_args()
 
 
@@ -91,6 +103,18 @@ def _default_outfile(topic: str, kind: Literal["report", "outline"], outline_for
     return base_dir / f"{stem} outline.{suffix}"
 
 
+def _normalize_subject_args(values: Optional[List[str]], flag_name: str) -> List[str]:
+    if not values:
+        return []
+    normalized: List[str] = []
+    for value in values:
+        trimmed = (value or "").strip()
+        if not trimmed:
+            raise SystemExit(f"{flag_name} entries must contain non-whitespace characters.")
+        normalized.append(trimmed)
+    return normalized
+
+
 def _infer_topic(payload: Dict[str, Any]) -> str | None:
     topic = payload.get("topic")
     if isinstance(topic, str) and topic.strip():
@@ -103,7 +127,13 @@ def _infer_topic(payload: Dict[str, Any]) -> str | None:
     return None
 
 
-def load_payload(payload_file: Path | None, topic: str | None, sections: int | None = None) -> Dict[str, Any]:
+def load_payload(
+    payload_file: Path | None,
+    topic: str | None,
+    sections: int | None = None,
+    subject_inclusions: Optional[List[str]] = None,
+    subject_exclusions: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     if payload_file is not None:
         text = payload_file.read_text(encoding="utf-8")
         data = json.loads(text)
@@ -113,12 +143,20 @@ def load_payload(payload_file: Path | None, topic: str | None, sections: int | N
             )
         if sections is not None:
             data["sections"] = sections
+        if subject_inclusions:
+            data["subject_inclusions"] = subject_inclusions
+        if subject_exclusions:
+            data["subject_exclusions"] = subject_exclusions
         return data
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
     payload: Dict[str, Any] = {"topic": topic, "mode": "generate_report"}
     if sections is not None:
         payload["sections"] = sections
+    if subject_inclusions:
+        payload["subject_inclusions"] = subject_inclusions
+    if subject_exclusions:
+        payload["subject_exclusions"] = subject_exclusions
     return payload
 
 
@@ -134,6 +172,8 @@ def main() -> None:
     args = parse_args()
     if args.sections is not None and args.sections < 1:
         raise SystemExit("--sections must be greater than or equal to 1.")
+    subject_inclusions = _normalize_subject_args(args.subject_inclusions, "--subject-inclusion")
+    subject_exclusions = _normalize_subject_args(args.subject_exclusions, "--subject-exclusion")
     if args.outline:
         if args.topic is None:
             raise SystemExit("Provide --topic when requesting an outline.")
@@ -148,6 +188,10 @@ def main() -> None:
         params: Dict[str, Any] = {"topic": args.topic, "format": args.format}
         if args.sections is not None:
             params["sections"] = args.sections
+        if subject_inclusions:
+            params["subject_inclusions"] = subject_inclusions
+        if subject_exclusions:
+            params["subject_exclusions"] = subject_exclusions
 
         with httpx.Client(timeout=None) as client:
             response = client.get(target, params=params)
@@ -165,7 +209,13 @@ def main() -> None:
         _write_text_file(outfile, output_text, f"Saved outline to {outfile}")
         return
 
-    payload = load_payload(args.payload_file, args.topic, sections=args.sections)
+    payload = load_payload(
+        args.payload_file,
+        args.topic,
+        sections=args.sections,
+        subject_inclusions=subject_inclusions,
+        subject_exclusions=subject_exclusions,
+    )
 
     inferred_topic = _infer_topic(payload)
     default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else GENERATED_REPORTS_DIR / 'report.md'
