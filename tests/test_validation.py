@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from report_generator.models import GenerateRequest, OutlineRequest
-from report_generator.outline_service import OutlineService
+from backend.models import GenerateRequest, OutlineRequest
+from backend.outline_service import OutlineService
 
 
 def test_generate_request_requires_non_empty_topic_when_no_outline():

@@ -1,11 +1,5 @@
-"""
-Compatibility layer that re-exports Explorer's backend modules under the legacy
-``report_generator`` namespace. Downstream code that hasn't migrated can keep
-importing from ``report_generator`` without breaking.
-"""
-
-from backend import formatting, openai_client, prompts, summary
-from backend.models import (
+from . import formatting, openai_client, prompts, summary
+from .models import (
     GenerateRequest,
     ModelSpec,
     Outline,

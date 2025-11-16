@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from client.stream_report import _prepare_final_report, load_payload
+from cli.stream_report import _prepare_final_report, load_payload
 
 
 def test_load_payload_requires_json_object(tmp_path: Path) -> None:

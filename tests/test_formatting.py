@@ -7,8 +7,8 @@ from pathlib import Path
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from report_generator.formatting import parse_outline_json
-from report_generator.models import Outline
+from backend.formatting import parse_outline_json
+from backend.models import Outline
 
 
 def test_parse_outline_json_allows_trailing_text() -> None:

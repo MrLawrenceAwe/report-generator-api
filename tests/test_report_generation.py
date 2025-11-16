@@ -14,14 +14,14 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from app import app, get_report_service
-from report_generator.models import (
+from backend.models import (
     DEFAULT_TEXT_MODEL,
     GenerateRequest,
     Outline,
     Section,
 )
-from report_generator.outline_service import OutlineService
-from report_generator.report_service import ReportGeneratorService
+from backend.outline_service import OutlineService
+from backend.report_service import ReportGeneratorService
 
 
 class StubTextClient:

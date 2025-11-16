@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from report_generator.db import (
+from backend.db import (
     Base,
     Report,
     ReportStatus,

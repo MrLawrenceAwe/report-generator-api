@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-CLIENT_DIR = Path(__file__).resolve().parent
-GENERATED_REPORTS_DIR = CLIENT_DIR / 'generated_reports'
+CLI_DIR = Path(__file__).resolve().parent
+GENERATED_REPORTS_DIR = CLI_DIR / 'generated_reports'
 
 try:
     import httpx
@@ -19,11 +19,11 @@ except ImportError as exception:  # pragma: no cover - dependency check
 
 from pydantic import ValidationError
 
-REPO_ROOT = CLIENT_DIR.parent
+REPO_ROOT = CLI_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from report_generator.models import GenerateRequest, OutlineRequest
+from backend.models import GenerateRequest, OutlineRequest
 
 
 def parse_args() -> argparse.Namespace:
