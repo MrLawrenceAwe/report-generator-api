@@ -43,6 +43,21 @@ uvicorn app:app --reload --port 8000
 `client/stream_report.py` streams status updates to your terminal, saves finished artifacts under `client/generated_reports/`, and can optionally persist the raw NDJSON stream. It simply hits the API endpoint you configure (default `http://localhost:8000/generate_report`), so no OpenAI credential is required unless the server you are pointing at expects one in its own environment. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
 Add `--sections 4` (or any positive integer) to the outline/report commands below when you want to force the generated outline to contain exactly four main sections.
 
+## Data model foundation
+
+The domain entities for `User`, `Topic`, and `Report` live in `report_generator/db/models.py`. They are standard SQLAlchemy 2.0 ORM classes with forward-looking metadata (embeddings, tags, timestamps, etc.). To get started in your own service:
+
+```python
+from report_generator.db import Base, create_engine_from_url, create_session_factory
+
+# Simple SQLite file for local/dev usage
+engine = create_engine_from_url("sqlite:///reportgen.db")
+Base.metadata.create_all(engine)
+SessionFactory = create_session_factory(engine)
+```
+
+Use `report_generator.db.session_scope` whenever you need a short-lived transactional scope in scripts or background jobs. When you're ready to move beyond SQLite, install the appropriate driver for your target database (e.g., `psycopg[binary]` for PostgreSQL) and swap the connection URL accordingly.
+
 ### Outline from a topic
 
 ```bash

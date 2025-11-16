@@ -5,3 +5,4 @@ openai>=1.43.0
 # websockets 14+ emits deprecation warnings for legacy imports used by uvicorn.
 # Pin to the last non-warning release until uvicorn updates its adapters.
 websockets<14
+SQLAlchemy>=2.0.32,<3.0
