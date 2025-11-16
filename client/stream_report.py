@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
-
-import re
 
 CLIENT_DIR = Path(__file__).resolve().parent
 GENERATED_REPORTS_DIR = CLIENT_DIR / 'generated_reports'
@@ -17,6 +16,14 @@ try:
     import httpx
 except ImportError as exception:  # pragma: no cover - dependency check
     raise SystemExit("httpx is required to run this script (pip install httpx)") from exception
+
+from pydantic import ValidationError
+
+REPO_ROOT = CLIENT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from report_generator.models import GenerateRequest, OutlineRequest
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,7 +154,12 @@ def load_payload(
             data["subject_inclusions"] = subject_inclusions
         if subject_exclusions:
             data["subject_exclusions"] = subject_exclusions
+        try:
+            GenerateRequest.model_validate(data)
+        except ValidationError as exc:
+            raise SystemExit(f"Invalid report payload: {exc}") from exc
         return data
+
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
     payload: Dict[str, Any] = {"topic": topic, "mode": "generate_report"}
@@ -157,7 +169,12 @@ def load_payload(
         payload["subject_inclusions"] = subject_inclusions
     if subject_exclusions:
         payload["subject_exclusions"] = subject_exclusions
-    return payload
+
+    try:
+        request = GenerateRequest.model_validate(payload)
+    except ValidationError as exc:
+        raise SystemExit(f"Invalid report payload: {exc}") from exc
+    return request.model_dump(by_alias=True)
 
 
 def _write_text_file(path: Path, contents: str, message: str, show_message: bool = True) -> None:
@@ -172,8 +189,12 @@ def main() -> None:
     args = parse_args()
     if args.sections is not None and args.sections < 1:
         raise SystemExit("--sections must be greater than or equal to 1.")
-    subject_inclusions = _normalize_subject_args(args.subject_inclusions, "--subject-inclusion")
-    subject_exclusions = _normalize_subject_args(args.subject_exclusions, "--subject-exclusion")
+    subject_inclusions = _normalize_subject_args(
+        args.subject_inclusions, "--subject-inclusion"
+    )
+    subject_exclusions = _normalize_subject_args(
+        args.subject_exclusions, "--subject-exclusion"
+    )
     if args.outline:
         if args.topic is None:
             raise SystemExit("Provide --topic when requesting an outline.")
@@ -185,13 +206,23 @@ def main() -> None:
         if outfile is None:
             outfile = _default_outfile(args.topic, "outline", args.format)
 
-        params: Dict[str, Any] = {"topic": args.topic, "format": args.format}
-        if args.sections is not None:
-            params["sections"] = args.sections
-        if subject_inclusions:
-            params["subject_inclusions"] = subject_inclusions
-        if subject_exclusions:
-            params["subject_exclusions"] = subject_exclusions
+        try:
+            outline_request = OutlineRequest.model_validate(
+                {
+                    "topic": args.topic,
+                    "format": args.format,
+                    "sections": args.sections,
+                    "subject_inclusions": subject_inclusions,
+                    "subject_exclusions": subject_exclusions,
+                }
+            )
+        except ValidationError as exc:
+            raise SystemExit(f"Invalid outline request: {exc}") from exc
+
+        params = outline_request.model_dump(
+            exclude={"model"},
+            exclude_none=True,
+        )
 
         with httpx.Client(timeout=None) as client:
             response = client.get(target, params=params)

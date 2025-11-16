@@ -47,10 +47,7 @@ def _normalize_subjects(values: List[str], field_name: str) -> List[str]:
     return normalized
 
 
-class OutlineRequest(BaseModel):
-    topic: str
-    format: Literal["json", "markdown"] = "json"
-    model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
+class SubjectFilters(BaseModel):
     subject_inclusions: List[str] = Field(
         default_factory=list,
         description="Subjects that must be covered; defaults to none.",
@@ -62,15 +59,11 @@ class OutlineRequest(BaseModel):
     sections: Optional[int] = Field(
         default=None,
         ge=1,
-        description="Force the outline to contain exactly this many main sections.",
+        description="Force the content to contain exactly this many main sections when provided.",
     )
 
     @model_validator(mode="after")
-    def validate_topic(self):
-        topic = self.topic.strip()
-        if not topic:
-            raise ValueError("Topic must contain non-whitespace characters.")
-        self.topic = topic
+    def normalize_subject_filters(self):
         self.subject_inclusions = _normalize_subjects(
             self.subject_inclusions, "subject_inclusions"
         )
@@ -80,23 +73,24 @@ class OutlineRequest(BaseModel):
         return self
 
 
-class GenerateRequest(BaseModel):
+class OutlineRequest(SubjectFilters):
+    topic: str
+    format: Literal["json", "markdown"] = "json"
+    model: ModelSpec = ModelSpec(model=DEFAULT_TEXT_MODEL)
+
+    @model_validator(mode="after")
+    def validate_topic(self):
+        topic = self.topic.strip()
+        if not topic:
+            raise ValueError("Topic must contain non-whitespace characters.")
+        self.topic = topic
+        return self
+
+
+class GenerateRequest(SubjectFilters):
     topic: Optional[str] = None
     mode: Optional[Literal["generate_report"]] = None
     outline: Optional[Outline] = None
-    subject_inclusions: List[str] = Field(
-        default_factory=list,
-        description="Subjects that must be covered; defaults to none.",
-    )
-    subject_exclusions: List[str] = Field(
-        default_factory=list,
-        description="Subjects that must be avoided; defaults to none.",
-    )
-    sections: Optional[int] = Field(
-        default=None,
-        ge=1,
-        description="When no outline is provided, request an outline with this many sections.",
-    )
     models: Dict[str, ModelSpec] = Field(
         default_factory=lambda: {
             "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
@@ -110,12 +104,6 @@ class GenerateRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_topic_and_mode(self):
-        self.subject_inclusions = _normalize_subjects(
-            self.subject_inclusions, "subject_inclusions"
-        )
-        self.subject_exclusions = _normalize_subjects(
-            self.subject_exclusions, "subject_exclusions"
-        )
         if self.outline is None:
             topic = self.topic.strip() if isinstance(self.topic, str) else ""
             if not topic:

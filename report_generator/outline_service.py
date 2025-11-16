@@ -25,22 +25,33 @@ class OutlineService:
     def build_outline_request(
         topic: str,
         outline_format: str,
-        model_name: Optional[str],
-        reasoning_effort: Optional[ReasoningEffort],
+        model_name: Optional[str] = None,
+        reasoning_effort: Optional[ReasoningEffort] = None,
+        *,
+        model_spec: Optional[ModelSpec] = None,
         sections: Optional[int] = None,
         subject_inclusions: Optional[List[str]] = None,
         subject_exclusions: Optional[List[str]] = None,
     ) -> OutlineRequest:
+        """Build an ``OutlineRequest`` for the supplied topic.
+
+        Any provided ``model_spec`` is copied before mutation so callers retain their original
+        ``ModelSpec`` instance unchanged.
+        """
         normalized_topic = topic.strip()
         if not normalized_topic:
             raise ValueError("Topic must contain non-whitespace characters.")
-        model_spec = ModelSpec(model=model_name or DEFAULT_TEXT_MODEL)
-        if reasoning_effort and supports_reasoning(model_spec.model):
-            model_spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
+        spec = (
+            model_spec.model_copy(deep=True)
+            if model_spec is not None
+            else ModelSpec(model=model_name or DEFAULT_TEXT_MODEL)
+        )
+        if reasoning_effort and supports_reasoning(spec.model):
+            spec.reasoning_effort = reasoning_effort  # Filtering occurs downstream
         return OutlineRequest(
             topic=normalized_topic,
             format=outline_format,
-            model=model_spec,
+            model=spec,
             sections=sections,
             subject_inclusions=subject_inclusions or [],
             subject_exclusions=subject_exclusions or [],

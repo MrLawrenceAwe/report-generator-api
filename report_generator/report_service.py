@@ -14,7 +14,6 @@ from .models import (
     GenerateRequest,
     ModelSpec,
     Outline,
-    OutlineRequest,
     maybe_add_reasoning,
 )
 from .openai_client import OpenAITextClient, get_default_text_client
@@ -163,9 +162,10 @@ class _ReportStreamRunner:
             async with self.service._emit_status(outline_status) as status:
                 yield status
 
-            outline_request = OutlineRequest(
-                topic=self.request.topic,
-                model=self.outline_spec,
+            outline_request = self.service.outline_service.build_outline_request(
+                self.request.topic,
+                "json",
+                model_spec=self.outline_spec,
                 sections=self.request.sections,
                 subject_inclusions=self.request.subject_inclusions,
                 subject_exclusions=self.request.subject_exclusions,

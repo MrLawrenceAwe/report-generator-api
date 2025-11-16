@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from typing import Any, Dict, Optional
 
 from openai import AsyncOpenAI, OpenAI
@@ -54,11 +55,13 @@ class OpenAITextClient:
         return AsyncOpenAI(base_url=base_url) if base_url else AsyncOpenAI()
 
 
-_default_text_client = OpenAITextClient()
+@lru_cache
+def _default_text_client() -> OpenAITextClient:
+    return OpenAITextClient()
 
 
 def get_default_text_client() -> OpenAITextClient:
-    return _default_text_client
+    return _default_text_client()
 
 
 def _build_request_kwargs(
