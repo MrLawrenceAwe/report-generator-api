@@ -143,7 +143,12 @@ def load_payload(
 ) -> Dict[str, Any]:
     if payload_file is not None:
         text = payload_file.read_text(encoding="utf-8")
-        data = json.loads(text)
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(
+                f"Payload file '{payload_file}' must contain valid JSON: {exc}"
+            ) from exc
         if not isinstance(data, dict):
             raise SystemExit(
                 "Payload file must contain a JSON object (mapping of field names to values)."
@@ -175,6 +180,30 @@ def load_payload(
     except ValidationError as exc:
         raise SystemExit(f"Invalid report payload: {exc}") from exc
     return request.model_dump(by_alias=True)
+
+
+def _prepare_final_report(final_event: Dict[str, Any]) -> str:
+    status = final_event.get("status")
+    if status != "complete":
+        detail_parts = [
+            "Report generation did not complete successfully.",
+            f"Final status: {status!r}",
+        ]
+        detail = final_event.get("detail")
+        if detail:
+            detail_parts.append(f"Detail: {detail}")
+        section = final_event.get("section")
+        if section:
+            detail_parts.append(f"Section: {section}")
+        detail_parts.append("Final event: " + json.dumps(final_event, indent=2))
+        raise SystemExit("\n".join(detail_parts))
+    report = final_event.get("report")
+    if not isinstance(report, str):
+        raise SystemExit(
+            "Final payload did not contain a 'report' field. "
+            + json.dumps(final_event, indent=2)
+        )
+    return report
 
 
 def _write_text_file(path: Path, contents: str, message: str, show_message: bool = True) -> None:
@@ -288,9 +317,7 @@ def main() -> None:
     if not final_event:
         raise SystemExit("Stream ended without a JSON payload to write.")
 
-    report = final_event.get("report")
-    if not isinstance(report, str):
-        raise SystemExit("Final payload did not contain a 'report' field.")
+    report = _prepare_final_report(final_event)
 
     _write_text_file(outfile, report, f"Report generation complete. Saved to {outfile}")
 

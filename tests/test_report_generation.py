@@ -220,6 +220,48 @@ def test_report_generator_cleanup_failure_emits_error_event():
     assert len(stub_text_client.calls) == 3
 
 
+def test_report_generator_runs_cleanup_even_when_models_match():
+    outline = Outline(
+        report_title="Insights",
+        sections=[Section(title="Background", subsections=["Overview"])],
+    )
+    stub_text_client = StubTextClient(
+        [
+            "### Overview\nWriter body",
+            "### Overview\nTranslated body",
+            "### Overview\nClean body",
+        ]
+    )
+    service = ReportGeneratorService(
+        outline_service=DummyOutlineService(),
+        text_client=stub_text_client,
+    )
+    request = GenerateRequest.model_validate(
+        {
+            "outline": outline.model_dump(),
+            "models": {
+                "outline": {"model": "outline-model"},
+                "writer": {"model": "writer-model"},
+                "translator": {"model": "translator-model"},
+                "cleanup": {"model": "translator-model"},
+            },
+        }
+    )
+
+    events = []
+
+    async def collect_events():
+        async for event in service.stream_report(request):
+            events.append(event)
+
+    asyncio.run(collect_events())
+
+    statuses = [event["status"] for event in events]
+    assert "cleaning_section" in statuses
+    assert statuses[-1] == "complete"
+    assert len(stub_text_client.calls) == 3
+
+
 def test_report_generator_processes_multiple_sections_with_minimal_outline():
     max_sections = 4
     sections = []

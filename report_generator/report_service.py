@@ -89,7 +89,13 @@ class _ReportStreamRunner:
         self.outline_spec = models.get("outline", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.writer_spec = models.get("writer", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.translator_spec = models.get("translator", ModelSpec(model=DEFAULT_TEXT_MODEL))
-        self.cleanup_spec = models.get("cleanup", self.translator_spec)
+        cleanup_spec = models.get("cleanup")
+        if cleanup_spec is not None:
+            self.cleanup_spec = cleanup_spec
+            self.cleanup_required = True
+        else:
+            self.cleanup_spec = self.translator_spec
+            self.cleanup_required = False
         self.writer_state = WriterState.build(
             self.writer_spec,
             (
@@ -98,7 +104,6 @@ class _ReportStreamRunner:
                 else None
             ),
         )
-        self.cleanup_required = self.cleanup_spec.model != self.translator_spec.model
         self._encountered_error = False
 
     async def run(self) -> AsyncGenerator[Dict[str, Any], None]:
