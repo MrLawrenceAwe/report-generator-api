@@ -238,12 +238,17 @@ def main() -> None:
                         continue
                     if raw_stream_handle:
                         raw_stream_handle.write(line + "\n")
-                    if args.show_progress:
-                        print(line)
                     try:
                         event = json.loads(line)
                     except json.JSONDecodeError:
+                        if args.show_progress:
+                            print(line)
                         continue
+                    if args.show_progress:
+                        event_for_display = event
+                        if event.get("status") == "complete" and "report" in event:
+                            event_for_display = {k: v for k, v in event.items() if k != "report"}
+                        print(json.dumps(event_for_display))
                     final_event = event
     finally:
         if raw_stream_handle:
