@@ -614,42 +614,42 @@ function App() {
               onSubmit={handleOutlineSubmit}
             >
               <label className="outline-composer__field">
-                <span>Outline topic</span>
+                <span className="outline-composer__eyebrow">Outline topic</span>
                 <input
                   type="text"
                   value={outlineTopic}
-                onChange={(event) => setOutlineTopic(event.target.value)}
-                placeholder="e.g., The future of battery recycling"
-                disabled={isRunning}
-              />
-            </label>
-            <div className="outline-format-toggle" role="tablist" aria-label="Outline input format">
-              {OUTLINE_INPUT_MODES.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="tab"
-                  aria-selected={outlineInputMode === option.value}
-                  className={`outline-format-toggle__option${
-                    outlineInputMode === option.value
-                      ? " outline-format-toggle__option--active"
-                      : ""
-                  }`}
-                  onClick={() => !isRunning && setOutlineInputMode(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+                  onChange={(event) => setOutlineTopic(event.target.value)}
+                  placeholder="e.g., The future of battery recycling"
+                  disabled={isRunning}
+                />
+              </label>
+              <div className="outline-format-toggle" role="tablist" aria-label="Outline input format">
+                {OUTLINE_INPUT_MODES.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={outlineInputMode === option.value}
+                    className={`outline-format-toggle__option${
+                      outlineInputMode === option.value
+                        ? " outline-format-toggle__option--active"
+                        : ""
+                    }`}
+                    onClick={() => !isRunning && setOutlineInputMode(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             {outlineInputMode === "lines" ? (
               <div className="outline-lines">
                 <p className="outline-help">List section titles and subsections manually.</p>
                 <div className="outline-section-list">
                   {outlineSections.map((section, sectionIndex) => (
                     <div key={section.id} className="outline-section">
-                      <div className="outline-section__title-row">
-                        <label>
-                          Section {sectionIndex + 1}
+                      <div className="outline-section__header">
+                        <div className="outline-section__meta">
+                          <span className="outline-section__badge">{sectionIndex + 1}</span>
                           <input
                             type="text"
                             value={section.title}
@@ -657,12 +657,14 @@ function App() {
                               handleOutlineSectionTitleChange(section.id, event.target.value)
                             }
                             placeholder="Section title"
+                            aria-label={`Section ${sectionIndex + 1} title`}
                             disabled={isRunning}
                           />
-                        </label>
+                        </div>
                         {outlineSections.length > 1 && (
                           <button
                             type="button"
+                            className="outline-section__remove"
                             onClick={() => handleRemoveOutlineSection(section.id)}
                             disabled={isRunning}
                           >
@@ -673,6 +675,9 @@ function App() {
                       <div className="outline-subsection-list">
                         {section.subsections.map((subsection, subsectionIndex) => (
                           <div key={`${section.id}-${subsectionIndex}`} className="outline-subsection">
+                            <span className="outline-subsection__badge">
+                              {sectionIndex + 1}.{subsectionIndex + 1}
+                            </span>
                             <input
                               type="text"
                               value={subsection}
@@ -684,6 +689,7 @@ function App() {
                                 )
                               }
                               placeholder="Subsection"
+                              aria-label={`Section ${sectionIndex + 1} subsection ${subsectionIndex + 1}`}
                               disabled={isRunning}
                             />
                             {section.subsections.length > 1 && (
@@ -712,14 +718,6 @@ function App() {
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  className="outline-add-button outline-add-button--section"
-                  onClick={handleAddOutlineSection}
-                  disabled={isRunning}
-                >
-                  + Add section
-                </button>
               </div>
             ) : (
               <div className="outline-json-block">
@@ -737,9 +735,21 @@ function App() {
               </div>
             )}
             {outlineError && <p className="outline-error">{outlineError}</p>}
-            <button type="submit" className="outline-submit" disabled={!isOutlineFormValid || isRunning}>
-              {outlineSubmitLabel}
-            </button>
+            <div className="outline-builder__actions">
+              {outlineInputMode === "lines" && (
+                <button
+                  type="button"
+                  className="outline-add-button outline-add-button--section"
+                  onClick={handleAddOutlineSection}
+                  disabled={isRunning}
+                >
+                  + Add section
+                </button>
+              )}
+              <button type="submit" className="outline-submit" disabled={!isOutlineFormValid || isRunning}>
+                {outlineSubmitLabel}
+              </button>
+            </div>
             </form>
           </>
         )}

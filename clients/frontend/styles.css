@@ -365,6 +365,13 @@ body::after {
   color: var(--muted);
 }
 
+.outline-composer__eyebrow {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-strong);
+}
+
 .outline-composer__field input {
   border: 1px solid var(--panel-border-strong);
   border-radius: 18px;
@@ -428,23 +435,34 @@ body::after {
   gap: 14px;
 }
 
-.outline-section__title-row {
+.outline-section__header {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  align-items: flex-end;
+  align-items: center;
+  gap: 12px;
 }
 
-.outline-section__title-row label {
+.outline-section__meta {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
+  align-items: center;
+  gap: 12px;
+}
+
+.outline-section__badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--muted-strong);
 }
 
-.outline-section__title-row input {
+.outline-section__meta input {
+  flex: 1;
   border: 1px solid var(--panel-border-strong);
   border-radius: 16px;
   padding: 12px 14px;
@@ -453,7 +471,7 @@ body::after {
   color: inherit;
 }
 
-.outline-section__title-row button,
+.outline-section__remove,
 .outline-subsection button,
 .outline-add-button {
   border: none;
@@ -466,7 +484,7 @@ body::after {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.outline-section__title-row button:hover,
+.outline-section__remove:hover,
 .outline-subsection button:hover,
 .outline-add-button:hover {
   background: rgba(255, 255, 255, 0.14);
@@ -481,6 +499,17 @@ body::after {
 .outline-subsection {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.outline-subsection__badge {
+  width: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+  padding: 10px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .outline-subsection input {
@@ -512,6 +541,17 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.outline-builder__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.outline-builder__actions .outline-add-button--section {
+  margin-left: 0;
 }
 
 .outline-json-input {
@@ -619,18 +659,34 @@ body::after {
     width: 100%;
   }
 
-  .outline-section__title-row {
+  .outline-section__header {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .outline-section__meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .outline-section__badge,
+  .outline-subsection__badge {
+    width: 100%;
+  }
+
   .outline-subsection {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .outline-subsection button {
     width: 100%;
     height: 40px;
+  }
+
+  .outline-builder__actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .outline-submit {
