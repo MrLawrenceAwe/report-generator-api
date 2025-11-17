@@ -23,7 +23,7 @@ REPO_ROOT = CLI_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from backend.models import GenerateRequest, OutlineRequest
+from backend.models import GenerateRequest, OutlineRequest, normalize_subject_list
 
 
 def parse_args() -> argparse.Namespace:
@@ -111,15 +111,10 @@ def _default_outfile(topic: str, kind: Literal["report", "outline"], outline_for
 
 
 def _normalize_subject_args(values: Optional[List[str]], flag_name: str) -> List[str]:
-    if not values:
-        return []
-    normalized: List[str] = []
-    for value in values:
-        trimmed = (value or "").strip()
-        if not trimmed:
-            raise SystemExit(f"{flag_name} entries must contain non-whitespace characters.")
-        normalized.append(trimmed)
-    return normalized
+    try:
+        return normalize_subject_list(values, flag_name)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _infer_topic(payload: Dict[str, Any]) -> str | None:

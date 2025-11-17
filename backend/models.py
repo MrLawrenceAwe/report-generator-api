@@ -37,10 +37,14 @@ class Outline(BaseModel):
     sections: List[Section]
 
 
-def _normalize_subjects(values: List[str], field_name: str) -> List[str]:
+def normalize_subject_list(
+    values: Optional[List[str]], field_name: str
+) -> List[str]:
+    if not values:
+        return []
     normalized: List[str] = []
     for subject in values:
-        cleaned = subject.strip()
+        cleaned = (subject or "").strip()
         if not cleaned:
             raise ValueError(f"{field_name} entries must contain non-whitespace characters.")
         normalized.append(cleaned)
@@ -64,10 +68,10 @@ class SubjectFilters(BaseModel):
 
     @model_validator(mode="after")
     def normalize_subject_filters(self):
-        self.subject_inclusions = _normalize_subjects(
+        self.subject_inclusions = normalize_subject_list(
             self.subject_inclusions, "subject_inclusions"
         )
-        self.subject_exclusions = _normalize_subjects(
+        self.subject_exclusions = normalize_subject_list(
             self.subject_exclusions, "subject_exclusions"
         )
         return self

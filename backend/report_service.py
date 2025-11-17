@@ -149,16 +149,6 @@ class _ReportStreamRunner:
     async def _outline_phase(self) -> AsyncGenerator[Dict[str, Any], None]:
         provided_outline = self.request.outline
         if provided_outline is None:
-            if not self.request.topic:
-                async with self.service._emit_status(
-                    {
-                        "status": "error",
-                        "detail": "A topic is required when no outline is provided.",
-                    }
-                ) as status:
-                    yield status
-                return
-
             outline_status: Dict[str, Any] = {
                 "status": "generating_outline",
                 "model": self.outline_spec.model,
@@ -281,12 +271,9 @@ class _ReportStreamRunner:
                     exception, Exception
                 ):
                     raise
-                self._encountered_error = True
-                error_status = {
-                    "status": "error",
-                    "section": section_title,
-                    "detail": f"Failed to translate section '{section_title}': {exception}",
-                }
+                error_status = self._stage_error_payload(
+                    section_title, "translate", exception
+                )
                 async with self.service._emit_status(error_status) as status:
                     yield status
                 return
@@ -308,12 +295,9 @@ class _ReportStreamRunner:
                         exception, Exception
                     ):
                         raise
-                    self._encountered_error = True
-                    error_status = {
-                        "status": "error",
-                        "section": section_title,
-                        "detail": f"Failed to clean section '{section_title}': {exception}",
-                    }
+                    error_status = self._stage_error_payload(
+                        section_title, "clean", exception
+                    )
                     async with self.service._emit_status(error_status) as status:
                         yield status
                     return
@@ -377,6 +361,16 @@ class _ReportStreamRunner:
             "previous_model": self.writer_spec.model,
             "fallback_model": self.writer_state.active.model,
             "error": error,
+        }
+
+    def _stage_error_payload(
+        self, section_title: str, action: str, exception: Exception
+    ) -> Dict[str, Any]:
+        self._encountered_error = True
+        return {
+            "status": "error",
+            "section": section_title,
+            "detail": f"Failed to {action} section '{section_title}': {exception}",
         }
 
     async def _translate_section(
