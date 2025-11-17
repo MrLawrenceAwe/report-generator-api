@@ -76,6 +76,7 @@ The API now persists each finished report to disk plus SQLite by default. `backe
 - `EXPLORER_DEFAULT_OWNER_EMAIL` — change the fallback email when the caller does not provide `owner_email`.
 
 When using the CLI, pass `--owner-email` (and optionally `--owner-name`) to write reports under your own user record instead of the default system user.
+Use `scripts/clean_reports.py` whenever you want to purge the on-disk report artifacts (and optionally truncate the `reports` table) between test runs.
 
 ### Outline from a topic
 
