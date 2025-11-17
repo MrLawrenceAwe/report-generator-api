@@ -278,9 +278,16 @@ function App() {
         }
         return true;
       } catch (error) {
-        updateMessage(assistantId, {
-          content: `Something went wrong: ${error.message}`,
-        });
+        const isAbort = error && (error.name === "AbortError" || error.message === "The user aborted a request.");
+        if (isAbort) {
+          updateMessage(assistantId, (message) => ({
+            content: message.content || "Generation cancelled.",
+          }));
+        } else {
+          updateMessage(assistantId, {
+            content: `Something went wrong: ${error.message}`,
+          });
+        }
         return false;
       } finally {
         abortRef.current = null;

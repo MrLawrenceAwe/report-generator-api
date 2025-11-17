@@ -52,7 +52,7 @@ uvicorn backend.api.app:app --reload --port 8000
 
 Want to build a custom frontend or automate report generation elsewhere? Read `docs/report_workflow.md` for endpoint contracts, NDJSON event sequencing, model override semantics, and persistence notes.
 
-Use `--owner-email you@example.com --owner-username "your_handle"` to associate the generated report with a persisted Explorer user record. Add `--sections 4` (or any positive integer) when you want to force the generated outline to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
+Use `--owner-email you@example.com --owner-username "your_handle"` to associate the generated report with a persisted Explorer user record (both fields are required together). Add `--sections 4` (or any positive integer) when you want to force the generated outline to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
 
 ### Outline from a topic
 

@@ -18,7 +18,7 @@ Optional fields:
 - `outline` — full outline payload (skips outlining when present).
 - `sections` — exact number of sections to request for both outlining and writing.
 - `subject_inclusions`, `subject_exclusions` — sanitized via `normalize_subject_list`.
-- `owner_email`, `owner_username` — owner metadata; email is required when present, username is trimmed and can be empty.
+- `owner_email`, `owner_username` — owner metadata; supply both together (username is required whenever an email is provided).
 - `models` — per-stage overrides (see “Model configuration”).
 - `writer_fallback` — model name to fall back to if the primary writer errors.
 - `return` — either `"report"` (default) or `"report_with_outline"` to receive the outline in the final payload as `outline_used`.
@@ -96,5 +96,5 @@ Failures at any stage trigger `discard_report`, which deletes artifacts and DB r
 1. **Build a typed client.** Mirror `clients/cli/stream_report.py` logic for payload validation, subject-filter cleanup, and owner metadata handling.
 2. **Handle every stream status.** Map `status` values to UI elements (spinners, per-section progress, fallback alerts, error banners).
 3. **Expose model overrides.** Let power users pick per-stage models and reasoning levels; enforce the backend’s rules before sending the payload so validation errors can appear inline.
-4. **Persist owner data.** Collect `owner_email` and username when the UI creates a run so artifacts link to real users instead of the system default.
+4. **Persist owner data.** Collect both `owner_email` and `owner_username` when the UI creates a run so artifacts link to real users instead of the system default.
 5. **Plan for retries/cancellation.** Surface backend errors, and ensure reruns send identical payloads when the user wants to resume a failed topic.

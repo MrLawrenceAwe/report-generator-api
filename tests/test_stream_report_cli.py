@@ -123,3 +123,64 @@ def test_load_outline_request_payload_accepts_cli_topic(tmp_path: Path) -> None:
     )
 
     assert params["topic"] == "Fallback Topic"
+
+
+def test_load_outline_request_payload_preserves_model_overrides(tmp_path: Path) -> None:
+    payload_file = tmp_path / "outline.json"
+    payload_file.write_text(
+        json.dumps(
+            {
+                "topic": "AI",
+                "model": {"model": "gpt-4o", "reasoning_effort": "low"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    params = load_outline_request_payload(
+        payload_file,
+        topic=None,
+        outline_format="markdown",
+        sections=None,
+        subject_inclusions=[],
+        subject_exclusions=[],
+    )
+
+    assert params["model"] == "gpt-4o"
+    assert params["reasoning_effort"] == "low"
+
+
+def test_load_payload_requires_owner_username_with_owner_email() -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        load_payload(
+            payload_file=None,
+            topic="AI",
+            owner_email="owner@example.com",
+            owner_username=None,
+        )
+
+    assert "owner_username" in str(excinfo.value)
+
+
+def test_load_payload_allows_override_when_payload_supplies_username(tmp_path: Path) -> None:
+    payload_file = tmp_path / "payload.json"
+    payload_file.write_text(
+        json.dumps(
+            {
+                "topic": "AI",
+                "mode": "generate_report",
+                "owner_username": "Payload User",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = load_payload(
+        payload_file=payload_file,
+        topic=None,
+        owner_email="override@example.com",
+        owner_username=None,
+    )
+
+    assert payload["owner_email"] == "override@example.com"
+    assert payload["owner_username"] == "Payload User"

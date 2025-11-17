@@ -96,7 +96,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--owner-username",
-        help="Username to store for the owner when --owner-email is provided.",
+        help="Username to store for the owner when --owner-email is provided (required whenever an owner email is supplied).",
     )
     return parser.parse_args()
 
@@ -204,7 +204,9 @@ def load_payload(
             subject_exclusions,
         )
         payload = _apply_owner_metadata(payload, owner_email, owner_username)
-        return _validate_generate_payload(payload)
+        validated = _validate_generate_payload(payload)
+        _enforce_owner_metadata_requirements(validated, owner_email=owner_email)
+        return validated
 
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
@@ -216,7 +218,22 @@ def load_payload(
         subject_exclusions,
     )
     payload = _apply_owner_metadata(payload, owner_email, owner_username)
-    return _validate_generate_payload(payload)
+    validated = _validate_generate_payload(payload)
+    _enforce_owner_metadata_requirements(validated, owner_email=owner_email)
+    return validated
+
+
+def _enforce_owner_metadata_requirements(
+    payload: Dict[str, Any],
+    *,
+    owner_email: Optional[str],
+) -> None:
+    # Topics provided via CLI defaults represent interactive runs where we expect explicit owner metadata.
+    # Outline-driven payloads (with pre-supplied outlines) may be auto-generated system runs and remain optional.
+    has_outline = isinstance(payload.get("outline"), dict)
+    if not has_outline and owner_email:
+        if not payload.get("owner_username"):
+            raise SystemExit("--owner-username must accompany --owner-email when override flags are provided.")
 
 
 def _apply_outline_overrides(
@@ -242,10 +259,19 @@ def _validate_outline_request(payload: Dict[str, Any]) -> Dict[str, Any]:
         request = OutlineRequest.model_validate(payload)
     except ValidationError as exc:
         raise SystemExit(f"Invalid outline request: {exc}") from exc
-    return request.model_dump(
+    params = request.model_dump(
         exclude={"model"},
         exclude_none=True,
     )
+    model_spec = payload.get("model")
+    if isinstance(model_spec, dict):
+        model_value = model_spec.get("model")
+        if isinstance(model_value, str) and model_value.strip():
+            params["model"] = model_value.strip()
+        reasoning = model_spec.get("reasoning_effort")
+        if isinstance(reasoning, str) and reasoning.strip():
+            params["reasoning_effort"] = reasoning.strip()
+    return params
 
 
 def load_outline_request_payload(

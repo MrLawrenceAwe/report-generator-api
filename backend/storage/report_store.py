@@ -74,10 +74,15 @@ class GeneratedReportStore:
             handle: Optional[StoredReportHandle] = None
             try:
                 with session_scope(self._session_factory) as session:
+                    owner_email = request.owner_email or self._default_owner_email
+                    if request.owner_email:
+                        owner_username = request.owner_username
+                    else:
+                        owner_username = request.owner_username or _SYSTEM_OWNER_USERNAME
                     user = self._get_or_create_user(
                         session,
-                        request.owner_email or self._default_owner_email,
-                        request.owner_username or _SYSTEM_OWNER_USERNAME,
+                        owner_email,
+                        owner_username,
                     )
                     saved_topic = self._get_or_create_saved_topic(
                         session,
@@ -160,7 +165,7 @@ class GeneratedReportStore:
     ) -> User:
         user = session.scalar(select(User).where(User.email == email))
         if user:
-            if username and not user.full_name:
+            if username and (not user.full_name or user.full_name == _SYSTEM_OWNER_USERNAME):
                 user.full_name = username
             return user
         user = User(email=email, full_name=username)

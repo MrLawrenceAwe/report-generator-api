@@ -128,7 +128,10 @@ class GenerateRequest(SubjectFilters):
             if not email:
                 raise ValueError("owner_email must contain non-whitespace characters when provided.")
             self.owner_email = email
-        if self.owner_username is not None:
+            if self.owner_username is None or not self.owner_username.strip():
+                raise ValueError("Provide owner_username when owner_email is supplied.")
+            self.owner_username = self.owner_username.strip()
+        elif self.owner_username is not None:
             normalized = self.owner_username.strip()
             self.owner_username = normalized or None
         return self

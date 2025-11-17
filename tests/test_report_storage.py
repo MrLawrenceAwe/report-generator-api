@@ -9,6 +9,7 @@ from backend.db import (
     Base,
     Report,
     ReportStatus,
+    User,
     create_engine_from_url,
     create_session_factory,
     session_scope,
@@ -98,3 +99,51 @@ def test_prepare_report_marks_failed_when_outline_snapshot_write_breaks(tmp_path
     with session_scope(session_factory) as session:
         report = session.scalar(select(Report))
         assert report is None
+
+
+def test_prepare_report_uses_owner_username_for_custom_users(tmp_path: Path):
+    session_factory = _session_factory()
+    store = GeneratedReportStore(base_dir=tmp_path / "reports", session_factory=session_factory)
+    outline = Outline(report_title="Custom Owner", sections=[])
+    request = GenerateRequest.model_validate(
+        {
+            "topic": "Custom owner topic",
+            "mode": "generate_report",
+            "owner_email": "custom@example.com",
+            "owner_username": "Custom Owner",
+        }
+    )
+
+    handle = store.prepare_report(request, outline)
+    with session_scope(session_factory) as session:
+        user = session.get(User, handle.owner_user_id)
+        assert user is not None
+        assert user.full_name == "Custom Owner"
+
+
+def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
+    session_factory = _session_factory()
+    store = GeneratedReportStore(base_dir=tmp_path / "reports", session_factory=session_factory)
+    outline = Outline(report_title="Rename Owner", sections=[])
+
+    placeholder_email = "owner@example.com"
+    with session_scope(session_factory) as session:
+        user = User(email=placeholder_email, full_name="Explorer System")
+        session.add(user)
+        session.flush()
+
+    request = GenerateRequest.model_validate(
+        {
+            "topic": "Renaming topic",
+            "mode": "generate_report",
+            "owner_email": placeholder_email,
+            "owner_username": "Real Owner",
+        }
+    )
+
+    store.prepare_report(request, outline)
+
+    with session_scope(session_factory) as session:
+        user = session.scalar(select(User).where(User.email == placeholder_email))
+        assert user is not None
+        assert user.full_name == "Real Owner"
