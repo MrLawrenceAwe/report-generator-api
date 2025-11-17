@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 CLI_DIR = Path(__file__).resolve().parent
+CLIENTS_DIR = CLI_DIR.parent
 GENERATED_REPORTS_DIR = CLI_DIR / 'generated_reports'
 
 try:
@@ -19,7 +20,7 @@ except ImportError as exception:  # pragma: no cover - dependency check
 
 from pydantic import ValidationError
 
-REPO_ROOT = CLI_DIR.parent
+REPO_ROOT = CLIENTS_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
