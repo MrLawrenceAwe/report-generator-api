@@ -73,7 +73,7 @@ python clients/cli/stream_report.py --outline --topic "Supply chain resilience i
 ```
 
 - Produces `clients/cli/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
-- REST payload twin: `example_requests/outline_from_topic.json`.
+- Save the request payload to a JSON file and pass it back with `--payload-file` to rerun the same call.
 
 ### Report from only a topic (auto-generated outline)
 
@@ -82,12 +82,12 @@ python clients/cli/stream_report.py --topic "Supply chain resilience in 2025" --
 ```
 
 - Streams progress and saves `clients/cli/generated_reports/Supply chain resilience in 2025 report.md`.
-- Use `example_requests/report_from_topic.json` to issue the same request over HTTP or via another client.
+- Send a matching JSON body directly to `/generate_report` when you want to call it from another client.
 
 ### Report with your outline
 
 ```bash
-python clients/cli/stream_report.py --payload-file example_requests/report_with_custom_outline.json --show-progress
+python clients/cli/stream_report.py --payload-file path/to/your_outline_payload.json --show-progress
 ```
 
 - Reuses your outline and returns both the outline and finished report (`return="report_with_outline"` in the payload).
@@ -95,7 +95,7 @@ python clients/cli/stream_report.py --payload-file example_requests/report_with_
 ### Report with custom models
 
 ```bash
-python clients/cli/stream_report.py --payload-file example_requests/report_with_custom_models.json --show-progress
+python clients/cli/stream_report.py --payload-file path/to/your_models_payload.json --show-progress
 ```
 
 - Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator → cleanup). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
@@ -113,8 +113,8 @@ python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams
 
 ## API endpoints
 
-- `GET/POST /generate_outline` — Generate just the outline from a topic (see `example_requests/outline_from_topic.json`).
-- `POST /generate_report` — Produce the full report, optionally supplying a custom outline or model overrides (`example_requests/report_from_topic.json`, `report_with_custom_outline.json`, `report_with_custom_models.json`).
+- `GET/POST /generate_outline` — Generate just the outline from a topic.
+- `POST /generate_report` — Produce the full report, optionally supplying a custom outline or model overrides.
 
 ### `/generate_outline` request
 
