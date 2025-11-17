@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, TextIO
+from urllib.parse import urlparse, urlunparse
 
 CLI_DIR = Path(__file__).resolve().parent
 CLIENTS_DIR = CLI_DIR.parent
@@ -219,6 +220,21 @@ def _build_outline_params(
     )
 
 
+def _outline_target_url(target: str) -> str:
+    parsed = urlparse(target)
+    path = parsed.path or ""
+    normalized = path.rstrip("/")
+    suffix = "generate_report"
+    if normalized.endswith(suffix):
+        base_path = normalized[: -len(suffix)]
+        new_path = base_path + "generate_outline"
+        if not new_path.startswith("/"):
+            new_path = "/" + new_path
+    else:
+        new_path = normalized + "/generate_outline" if normalized else "/generate_outline"
+    return urlunparse(parsed._replace(path=new_path))
+
+
 def _prepare_final_report(final_event: Dict[str, Any]) -> str:
     status = final_event.get("status")
     if status != "complete":
@@ -320,9 +336,7 @@ def main() -> None:
     if args.outline:
         if args.topic is None:
             raise SystemExit("Provide --topic when requesting an outline.")
-        target = args.url
-        if target.endswith("/generate_report"):
-            target = target.rsplit("/", 1)[0] + "/generate_outline"
+        target = _outline_target_url(args.url)
 
         outfile = args.outfile or _default_outfile(args.topic, "outline", args.format)
         params = _build_outline_params(

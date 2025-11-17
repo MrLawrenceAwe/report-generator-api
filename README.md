@@ -104,9 +104,10 @@ python clients/cli/stream_report.py --payload-file example_requests/report_with_
 ### Capture the raw NDJSON stream
 
 ```bash
-pip install httpx  # once per environment
 python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
 ```
+
+`httpx` is bundled with `pip install -r requirements.txt`, so reinstalling dependencies per the quickstart keeps the CLI working.
 
 ---
 

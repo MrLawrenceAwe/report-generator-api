@@ -2,6 +2,8 @@ fastapi==0.114.1
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
 openai>=1.43.0
+# HTTP client used by the CLI
+httpx>=0.28.0
 # websockets 14+ emits deprecation warnings for legacy imports used by uvicorn.
 # Pin to the last non-warning release until uvicorn updates its adapters.
 websockets<14
