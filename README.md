@@ -26,7 +26,7 @@ You can also prefix inline commands:
 
 ```bash
 OPENAI_API_KEY="sk-your-key" uvicorn backend.api.app:app --reload --port 8000
-OPENAI_API_KEY="sk-your-key" python clients/cli/stream_report.py --topic "Future of urban farming"
+OPENAI_API_KEY="sk-your-key" python -m clients.cli.stream_report --topic "Future of urban farming"
 ```
 
 ---
@@ -48,7 +48,7 @@ uvicorn backend.api.app:app --reload --port 8000
 
 ## Generate outlines and reports
 
-`clients/cli/stream_report.py` streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
+`clients/cli/stream_report.py` (run via `python -m clients.cli.stream_report` or `python -m clients.cli`) streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
 
 Want to build a custom frontend or automate report generation elsewhere? Read `docs/report_workflow.md` for endpoint contracts, NDJSON event sequencing, model override semantics, and persistence notes.
 
@@ -57,7 +57,7 @@ Use `--owner-email you@example.com --owner-username "your_handle"` to associate 
 ### Outline from a topic
 
 ```bash
-python clients/cli/stream_report.py --outline --topic "Supply chain resilience in 2025"
+python -m clients.cli.stream_report --outline --topic "Supply chain resilience in 2025"
 ```
 
 - Produces `clients/cli/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
@@ -66,7 +66,7 @@ python clients/cli/stream_report.py --outline --topic "Supply chain resilience i
 ### Report from only a topic (auto-generated outline)
 
 ```bash
-python clients/cli/stream_report.py --topic "Supply chain resilience in 2025" --show-progress
+python -m clients.cli.stream_report --topic "Supply chain resilience in 2025" --show-progress
 ```
 
 - Streams progress and saves `clients/cli/generated_reports/Supply chain resilience in 2025 report.md`.
@@ -75,7 +75,7 @@ python clients/cli/stream_report.py --topic "Supply chain resilience in 2025" --
 ### Report with your outline
 
 ```bash
-python clients/cli/stream_report.py --payload-file path/to/your_outline_payload.json --show-progress
+python -m clients.cli.stream_report --payload-file path/to/your_outline_payload.json --show-progress
 ```
 
 - Reuses your outline and returns both the outline and finished report (`return="report_with_outline"` in the payload).
@@ -83,7 +83,7 @@ python clients/cli/stream_report.py --payload-file path/to/your_outline_payload.
 ### Report with custom models
 
 ```bash
-python clients/cli/stream_report.py --payload-file path/to/your_models_payload.json --show-progress
+python -m clients.cli.stream_report --payload-file path/to/your_models_payload.json --show-progress
 ```
 
 - Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator → cleanup). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
@@ -92,7 +92,7 @@ python clients/cli/stream_report.py --payload-file path/to/your_models_payload.j
 ### Capture the raw NDJSON stream
 
 ```bash
-python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
+python -m clients.cli.stream_report --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
 ```
 
 `httpx` is bundled with `pip install -r requirements.txt`, so reinstalling dependencies per the quickstart keeps the CLI working.
@@ -103,7 +103,7 @@ python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams
 
 Finished runs are persisted automatically via `backend.storage.GeneratedReportStore`. Each user/report pair creates `outline.json` and `report.md` files under `data/reports/<owner_id>/<report_id>/` plus a row in `reportgen.db`. Failed generations clean themselves up.
 
-Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs. When schema changes land (like the Saved Topics rename), rerun that helper or delete `reportgen.db` before restarting the API—there isn’t a formal migration path yet.
+Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs. When schema changes land (like the Saved Topics rename), drop `reportgen.db` before restarting the API so the schema stays up-to-date.
 
 ---
 

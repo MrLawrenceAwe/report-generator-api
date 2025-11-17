@@ -109,6 +109,7 @@ class _ReportStreamRunner:
             ),
         )
         self._encountered_error = False
+        self._assembled_narration: Optional[str] = None
         self._storage_handle: Optional[StoredReportHandle] = None
         self._written_sections: List[WrittenSection] = []
 
@@ -137,7 +138,6 @@ class _ReportStreamRunner:
             async with self.service._emit_status(begin_status) as status:
                 yield status
 
-            self._assembled_narration: Optional[str] = None
             async for status in self._write_sections(
                 outline, numbered_sections, all_section_headers
             ):
@@ -225,123 +225,138 @@ class _ReportStreamRunner:
         numbered_sections: List[NumberedSection],
         all_section_headers: List[str],
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        written_sections: List[WrittenSection] = []
-        self._written_sections = written_sections
+        self._written_sections = []
         assembled_blocks: List[str] = [outline.report_title]
 
         for section in numbered_sections:
-            section_title = section.title
-            subsection_titles = section.subsections
-
-            async with self.service._emit_status(
-                {"status": "writing_section", "section": section_title}
-            ) as status:
-                yield status
-
-            writer_system = "You write high-quality, well-structured prose that continues a report seamlessly."
-            report_context = self._build_report_context(
-                written_sections, section_title, subsection_titles
-            )
-            writer_prompt = build_section_writer_prompt(
-                outline.report_title,
+            async for status in self._process_section(
+                outline,
+                section,
                 all_section_headers,
-                section_title,
-                subsection_titles,
-                full_report_context=report_context,
-            )
+                assembled_blocks,
+            ):
+                yield status
+            if self._encountered_error:
+                break
 
-            while True:
-                try:
-                    section_text = await self.service.text_client.call_text_async(
-                        self.writer_state.active,
-                        writer_system,
-                        writer_prompt,
-                    )
-                    break
-                except BaseException as exception:
-                    if isinstance(exception, asyncio.CancelledError) or not isinstance(
-                        exception, Exception
+        self._assembled_narration = "\n\n".join(assembled_blocks)
+        return
+
+    async def _process_section(
+        self,
+        outline: Outline,
+        section: NumberedSection,
+        all_section_headers: List[str],
+        assembled_blocks: List[str],
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        section_title = section.title
+        subsection_titles = section.subsections
+
+        async for status in self._emit_status_payload(
+            {"status": "writing_section", "section": section_title}
+        ):
+            yield status
+
+        writer_system = "You write high-quality, well-structured prose that continues a report seamlessly."
+        report_context = self._build_report_context(
+            self._written_sections, section_title, subsection_titles
+        )
+        writer_prompt = build_section_writer_prompt(
+            outline.report_title,
+            all_section_headers,
+            section_title,
+            subsection_titles,
+            full_report_context=report_context,
+        )
+
+        while True:
+            try:
+                section_text = await self.service.text_client.call_text_async(
+                    self.writer_state.active,
+                    writer_system,
+                    writer_prompt,
+                )
+                break
+            except BaseException as exception:
+                if isinstance(exception, asyncio.CancelledError) or not isinstance(
+                    exception, Exception
+                ):
+                    raise
+                fallback_status = self._maybe_activate_writer_fallback(
+                    section_title, str(exception)
+                )
+                if fallback_status is None:
+                    async for status in self._emit_stage_error(
+                        section_title, "write", exception
                     ):
-                        raise
-                    fallback_status = self._maybe_activate_writer_fallback(
-                        section_title, str(exception)
-                    )
-                    if fallback_status is None:
-                        error_status = self._stage_error_payload(
-                            section_title, "write", exception
-                        )
-                        async with self.service._emit_status(error_status) as status:
-                            yield status
-                        return
-                    async with self.service._emit_status(fallback_status) as status:
                         yield status
-                    continue
+                    return
+                async for status in self._emit_status_payload(fallback_status):
+                    yield status
+                continue
 
-            section_text = enforce_subsection_headings(section_text, subsection_titles)
+        section_text = enforce_subsection_headings(section_text, subsection_titles)
 
-            async with self.service._emit_status(
-                {"status": "translating_section", "section": section_title}
-            ) as status:
+        async for status in self._emit_status_payload(
+            {"status": "translating_section", "section": section_title}
+        ):
+            yield status
+        try:
+            narrated = await self._translate_section(
+                outline.report_title,
+                section_title,
+                section_text,
+                inline_cleanup=not self.cleanup_required,
+            )
+        except BaseException as exception:
+            if isinstance(exception, asyncio.CancelledError) or not isinstance(
+                exception, Exception
+            ):
+                raise
+            async for status in self._emit_stage_error(
+                section_title, "translate", exception
+            ):
+                yield status
+            return
+
+        cleaned_narration = narrated
+        if self.cleanup_required:
+            async for status in self._emit_status_payload(
+                {"status": "cleaning_section", "section": section_title}
+            ):
                 yield status
             try:
-                narrated = await self._translate_section(
+                cleaned_narration = await self._cleanup_section(
                     outline.report_title,
                     section_title,
-                    section_text,
-                    inline_cleanup=not self.cleanup_required,
+                    narrated,
                 )
             except BaseException as exception:
                 if isinstance(exception, asyncio.CancelledError) or not isinstance(
                     exception, Exception
                 ):
                     raise
-                error_status = self._stage_error_payload(
-                    section_title, "translate", exception
-                )
-                async with self.service._emit_status(error_status) as status:
+                async for status in self._emit_stage_error(
+                    section_title, "clean", exception
+                ):
                     yield status
                 return
 
-            cleaned_narration = narrated
-            if self.cleanup_required:
-                async with self.service._emit_status(
-                    {"status": "cleaning_section", "section": section_title}
-                ) as status:
-                    yield status
-                try:
-                    cleaned_narration = await self._cleanup_section(
-                        outline.report_title,
-                        section_title,
-                        narrated,
-                    )
-                except BaseException as exception:
-                    if isinstance(exception, asyncio.CancelledError) or not isinstance(
-                        exception, Exception
-                    ):
-                        raise
-                    error_status = self._stage_error_payload(
-                        section_title, "clean", exception
-                    )
-                    async with self.service._emit_status(error_status) as status:
-                        yield status
-                    return
+        cleaned_narration = self._finalize_section_body(
+            cleaned_narration, subsection_titles
+        )
+        written_section = WrittenSection(
+            title=section_title,
+            body=cleaned_narration,
+        )
+        self._written_sections.append(written_section)
 
-            cleaned_narration = self._finalize_section_body(
-                cleaned_narration, subsection_titles
-            )
-            written_sections.append(
-                WrittenSection(title=section_title, body=cleaned_narration)
-            )
+        assembled_blocks.append(f"{section_title}\n\n{cleaned_narration}")
 
-            assembled_blocks.append(f"{section_title}\n\n{cleaned_narration}")
-
-            async with self.service._emit_status(
-                {"status": "section_complete", "section": section_title}
-            ) as status:
-                yield status
-
-        self._assembled_narration = "\n\n".join(assembled_blocks)
-        return
+        async for status in self._emit_status_payload(
+            {"status": "section_complete", "section": section_title}
+        ):
+            yield status
 
     def _build_report_context(
         self,
@@ -455,11 +470,25 @@ class _ReportStreamRunner:
         self, section_title: str, action: str, exception: Exception
     ) -> Dict[str, Any]:
         self._encountered_error = True
+        self._assembled_narration = None
         return {
             "status": "error",
             "section": section_title,
             "detail": f"Failed to {action} section '{section_title}': {exception}",
         }
+
+    async def _emit_status_payload(
+        self, payload: Dict[str, Any]
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        async with self.service._emit_status(payload) as status:
+            yield status
+
+    async def _emit_stage_error(
+        self, section_title: str, action: str, exception: Exception
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        payload = self._stage_error_payload(section_title, action, exception)
+        async for status in self._emit_status_payload(payload):
+            yield status
 
     async def _translate_section(
         self,

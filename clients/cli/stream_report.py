@@ -21,10 +21,6 @@ except ImportError as exception:  # pragma: no cover - dependency check
 
 from pydantic import ValidationError
 
-REPO_ROOT = CLIENTS_DIR.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
 from backend.models import GenerateRequest, OutlineRequest, normalize_subject_list
 
 
@@ -127,6 +123,21 @@ def _normalize_subject_args(values: Optional[List[str]], flag_name: str) -> List
         raise SystemExit(str(exc)) from exc
 
 
+def _load_json_mapping(payload_file: Path) -> Dict[str, Any]:
+    text = payload_file.read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Payload file '{payload_file}' must contain valid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise SystemExit(
+            "Payload file must contain a JSON object (mapping of field names to values)."
+        )
+    return data
+
+
 def _infer_topic(payload: Dict[str, Any]) -> str | None:
     topic = payload.get("topic")
     if isinstance(topic, str) and topic.strip():
@@ -186,17 +197,7 @@ def load_payload(
     owner_username: Optional[str] = None,
 ) -> Dict[str, Any]:
     if payload_file is not None:
-        text = payload_file.read_text(encoding="utf-8")
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise SystemExit(
-                f"Payload file '{payload_file}' must contain valid JSON: {exc}"
-            ) from exc
-        if not isinstance(data, dict):
-            raise SystemExit(
-                "Payload file must contain a JSON object (mapping of field names to values)."
-            )
+        data = _load_json_mapping(payload_file)
         payload = _apply_generation_options(
             data,
             sections,
@@ -294,17 +295,7 @@ def load_outline_request_payload(
         )
         return _validate_outline_request(payload)
 
-    text = payload_file.read_text(encoding="utf-8")
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise SystemExit(
-            f"Payload file '{payload_file}' must contain valid JSON: {exc}"
-        ) from exc
-    if not isinstance(data, dict):
-        raise SystemExit(
-            "Payload file must contain a JSON object (mapping of field names to values)."
-        )
+    data = _load_json_mapping(payload_file)
     payload = _apply_outline_overrides(
         data,
         outline_format,

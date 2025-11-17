@@ -8,6 +8,8 @@ from .models import Outline
 
 _SECTION_LABEL_RE = re.compile(r"Section\s+(\d+(?:\.\d+)*)\s*[:.-]?\s*(.*)", re.IGNORECASE)
 _NUMBER_PREFIX_RE = re.compile(r"^(\d+(?:\.\d+)*)\s*[:.-]?\s*(.*)$")
+_HASH_HEADING_PATTERN = re.compile(r"^###\s*")
+_NUMBERED_HEADING_PATTERN = re.compile(r"^(?:###\s*)?\d+(?:\.\d+)*\s*[:.-]?")
 
 
 def _ensure_numbered_title(title: str, default_number: str) -> str:
@@ -44,13 +46,11 @@ def enforce_subsection_headings(section_text: str, subsection_titles: List[str])
     lines = section_text.splitlines()
     result = []
     subsection_cursor = 0
-    hash_heading_pattern = re.compile(r"^###\s*")
-    numbered_heading_pattern = re.compile(r"^(?:###\s*)?\d+(?:\.\d+)*\s*[:.-]?")
 
     for line in lines:
         stripped = line.lstrip()
         if subsection_cursor < len(subsection_titles):
-            if hash_heading_pattern.match(stripped) or numbered_heading_pattern.match(stripped):
+            if _HASH_HEADING_PATTERN.match(stripped) or _NUMBERED_HEADING_PATTERN.match(stripped):
                 prefix = line[: len(line) - len(stripped)]
                 result.append(f"{prefix}{subsection_titles[subsection_cursor]}")
                 subsection_cursor += 1

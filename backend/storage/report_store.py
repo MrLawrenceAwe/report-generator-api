@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 from typing import Any, Dict, Iterable, Optional
 
-from sqlalchemy import select, inspect, text
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -36,6 +36,7 @@ _SYSTEM_OWNER_USERNAME = "Explorer System"
 
 _SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 _TOPIC_RETRY_LIMIT = 3
+
 
 
 @dataclass(frozen=True)
@@ -267,20 +268,5 @@ def _slugify(value: str) -> str:
 def _create_default_session_factory() -> sessionmaker[Session]:
     database_url = os.environ.get(_DEFAULT_DB_ENV, _DEFAULT_DB_URL)
     engine = create_engine_from_url(database_url)
-    _ensure_saved_topic_schema(engine)
     Base.metadata.create_all(engine)
     return create_session_factory(engine)
-
-
-def _ensure_saved_topic_schema(engine) -> None:
-    inspector = inspect(engine)
-    tables = inspector.get_table_names()
-    with engine.begin() as connection:
-        if "saved_topics" not in tables and "topics" in tables:
-            connection.execute(text("ALTER TABLE topics RENAME TO saved_topics"))
-        try:
-            report_columns = {column["name"] for column in inspector.get_columns("reports")}
-        except Exception:
-            return
-        if "saved_topic_id" not in report_columns and "topic_id" in report_columns:
-            connection.execute(text("ALTER TABLE reports RENAME COLUMN topic_id TO saved_topic_id"))
