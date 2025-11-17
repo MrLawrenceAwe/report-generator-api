@@ -30,28 +30,18 @@ const DEFAULT_OUTLINE_JSON = JSON.stringify(
   2
 );
 
-function buildOutlineRequestPayload(topic, sections) {
-  const cleanedSections = sections.map((section) => ({
-    title: (section.title || "").trim(),
-    subsections: (section.subsections || [])
-      .map((entry) => (entry || "").trim())
-      .filter(Boolean),
-  }));
-  const subjectInclusions = cleanedSections.flatMap((section) => {
-    const header = section.title ? [`Section: ${section.title}`] : [];
-    const details = section.subsections.map((entry) =>
-      section.title ? `${section.title}: ${entry}` : entry
-    );
-    return [...header, ...details];
-  });
-  const payload = { topic, format: "markdown" };
-  if (cleanedSections.length) {
-    payload.sections = cleanedSections.length;
-  }
-  if (subjectInclusions.length) {
-    payload.subject_inclusions = subjectInclusions;
-  }
-  return payload;
+function buildOutlineGeneratePayload(topic, sections) {
+  return {
+    mode: "generate_report",
+    return: "report",
+    outline: {
+      report_title: topic,
+      sections: sections.map((section) => ({
+        title: section.title,
+        subsections: section.subsections,
+      })),
+    },
+  };
 }
 
 function createEmptyOutlineSection() {
@@ -237,18 +227,14 @@ function App() {
     setMessages((current) => [...current, message]);
   }, []);
 
-  const runTopicFlow = useCallback(
-    async (prompt, assistantId) => {
+  const runReportFlow = useCallback(
+    async (generateRequest, assistantId, summaryLabel) => {
       abortRef.current = new AbortController();
       try {
         const response = await fetch(`${apiBase}/generate_report`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            topic: prompt,
-            mode: "generate_report",
-            return: "report",
-          }),
+          body: JSON.stringify(generateRequest),
           signal: abortRef.current.signal,
         });
         if (!response.ok || !response.body) {
@@ -287,8 +273,8 @@ function App() {
         updateMessage(assistantId, (message) => ({
           content: message.content || resolvedText,
         }));
-        if (finalText) {
-          rememberReport(prompt, finalText);
+        if (finalText && summaryLabel) {
+          rememberReport(summaryLabel, finalText);
         }
       } catch (error) {
         updateMessage(assistantId, {
@@ -299,29 +285,6 @@ function App() {
       }
     },
     [apiBase, rememberReport, updateMessage]
-  );
-
-  const runOutlineFlow = useCallback(
-    async (outlineRequest, assistantId) => {
-      try {
-        const response = await fetch(`${apiBase}/generate_outline`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(outlineRequest),
-        });
-        if (!response.ok) {
-          throw new Error(`Outline request failed (${response.status}).`);
-        }
-        const payload = await response.json();
-        const outlineText = payload.markdown_outline || JSON.stringify(payload, null, 2);
-        updateMessage(assistantId, { content: outlineText });
-      } catch (error) {
-        updateMessage(assistantId, {
-          content: `Something went wrong: ${error.message}`,
-        });
-      }
-    },
-    [apiBase, updateMessage]
   );
 
   const handleTopicSubmit = useCallback(
@@ -337,11 +300,15 @@ function App() {
       setComposerValue("");
       setIsRunning(true);
 
-      await runTopicFlow(prompt, assistantId);
+      await runReportFlow(
+        { topic: prompt, mode: "generate_report", return: "report" },
+        assistantId,
+        prompt
+      );
 
       setIsRunning(false);
     },
-    [appendMessage, composerValue, isRunning, rememberTopic, runTopicFlow]
+    [appendMessage, composerValue, isRunning, rememberTopic, runReportFlow]
   );
 
   const handleOutlineSubmit = useCallback(
@@ -357,7 +324,7 @@ function App() {
 
       let outlineBrief = "";
       let userSummary = "";
-      let outlineRequestPayload = null;
+      let outlineGeneratePayload = null;
 
       if (outlineInputMode === "lines") {
         const normalizedSections = outlineSections
@@ -385,7 +352,7 @@ function App() {
             .join("\n\n"),
         ].join("\n\n");
         userSummary = outlineBrief;
-        outlineRequestPayload = buildOutlineRequestPayload(
+        outlineGeneratePayload = buildOutlineGeneratePayload(
           topicText,
           normalizedSections
         );
@@ -431,13 +398,13 @@ function App() {
         }
         outlineBrief = `Outline topic: ${topicText}\n\nUse this JSON:\n${trimmedInput}`;
         userSummary = outlineBrief;
-        outlineRequestPayload = buildOutlineRequestPayload(
+        outlineGeneratePayload = buildOutlineGeneratePayload(
           topicText,
           normalizedJsonSections
         );
       }
 
-      if (!outlineRequestPayload) {
+      if (!outlineGeneratePayload) {
         setOutlineError("Unable to prepare the outline request.");
         return;
       }
@@ -453,7 +420,7 @@ function App() {
       setIsRunning(true);
       setOutlineError("");
 
-      await runOutlineFlow(outlineRequestPayload, assistantId);
+      await runReportFlow(outlineGeneratePayload, assistantId, topicText);
 
       setIsRunning(false);
       resetOutlineForm();
@@ -466,7 +433,7 @@ function App() {
       outlineSections,
       outlineTopic,
       resetOutlineForm,
-      runOutlineFlow,
+      runReportFlow,
     ]
   );
 
