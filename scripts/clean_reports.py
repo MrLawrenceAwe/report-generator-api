@@ -26,7 +26,7 @@ def _vacuum_db(db_path: Path, verbose: bool) -> None:
     try:
         with conn:
             conn.execute("DELETE FROM reports")
-            conn.execute("VACUUM")
+        conn.execute("VACUUM")
         if verbose:
             print(f"Cleared reports table in {db_path}")
     finally:

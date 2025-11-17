@@ -101,7 +101,7 @@ python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams
 
 Finished runs are persisted automatically via `backend.storage.GeneratedReportStore`. Each user/report pair creates `outline.json` and `report.md` files under `data/reports/<owner_id>/<report_id>/` plus a row in `reportgen.db`. Failed generations clean themselves up.
 
-Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs.
+Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs. When schema changes land (like the Saved Topics rename), rerun that helper or delete `reportgen.db` before restarting the API—there isn’t a formal migration path yet.
 
 ---
 

@@ -7,8 +7,7 @@ from backend.db import (
     Base,
     Report,
     ReportStatus,
-    Topic,
-    TopicVisibility,
+    SavedTopic,
     User,
     create_engine_from_url,
     create_session_factory,
@@ -30,20 +29,16 @@ def test_user_topic_report_relationships_round_trip():
         session.add(user)
         session.flush()
 
-        topic = Topic(
+        topic = SavedTopic(
             slug="electric-vehicles",
             title="Electric Vehicle Adoption",
-            description="EV adoption drivers and blockers.",
-            visibility=TopicVisibility.PUBLIC,
             owner=user,
-            canonical_keywords=["ev adoption", "charging"],
-            tags=["mobility"],
         )
         session.add(topic)
         session.flush()
 
         report = Report(
-            topic=topic,
+            saved_topic=topic,
             owner=user,
             status=ReportStatus.COMPLETE,
             summary="EV adoption report",
@@ -56,9 +51,9 @@ def test_user_topic_report_relationships_round_trip():
         stored_user = session.scalar(select(User).where(User.email == "test@example.com"))
         assert stored_user is not None
         assert stored_user.reports
-        assert stored_user.topics
+        assert stored_user.saved_topics
         report = stored_user.reports[0]
-        assert report.topic.slug == "electric-vehicles"
+        assert report.saved_topic.slug == "electric-vehicles"
         assert report.status is ReportStatus.COMPLETE
         assert report.last_accessed_at is None
 
