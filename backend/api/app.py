@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import List, Literal, Optional
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from backend.models import GenerateRequest, OutlineRequest, ReasoningEffort
@@ -12,6 +13,14 @@ from backend.report_service import ReportGeneratorService
 from backend.storage import GeneratedReportStore
 
 app = FastAPI(title="Explorer", version="2.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @lru_cache
