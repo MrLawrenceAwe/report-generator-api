@@ -50,7 +50,9 @@ uvicorn backend.api.app:app --reload --port 8000
 
 `clients/cli/stream_report.py` streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
 
-Use `--owner-email you@example.com --owner-name "Your Name"` to associate the generated report with a persisted Explorer user record. Add `--sections 4` (or any positive integer) when you want to force the generated outline to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
+Want to build a custom frontend or automate report generation elsewhere? Read `docs/report_workflow.md` for endpoint contracts, NDJSON event sequencing, model override semantics, and persistence notes.
+
+Use `--owner-email you@example.com --owner-username "your_handle"` to associate the generated report with a persisted Explorer user record. Add `--sections 4` (or any positive integer) when you want to force the generated outline to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
 
 ### Outline from a topic
 

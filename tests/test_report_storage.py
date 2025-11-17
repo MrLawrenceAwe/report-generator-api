@@ -35,7 +35,7 @@ def test_generated_report_store_persists_artifacts(tmp_path: Path):
             "topic": "Solar energy expansion",
             "mode": "generate_report",
             "owner_email": "owner@example.com",
-            "owner_full_name": "Owner Example",
+            "owner_username": "owner-example",
         }
     )
 

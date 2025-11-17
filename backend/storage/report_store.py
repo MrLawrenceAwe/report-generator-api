@@ -32,7 +32,7 @@ _DEFAULT_STORAGE_ENV = "EXPLORER_REPORT_STORAGE_DIR"
 _DEFAULT_STORAGE_DIR = "data/reports"
 _DEFAULT_OWNER_EMAIL_ENV = "EXPLORER_DEFAULT_OWNER_EMAIL"
 _SYSTEM_OWNER_EMAIL = "system@explorer.local"
-_SYSTEM_OWNER_NAME = "Explorer System"
+_SYSTEM_OWNER_USERNAME = "Explorer System"
 
 _SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 _TOPIC_RETRY_LIMIT = 3
@@ -77,7 +77,7 @@ class GeneratedReportStore:
                     user = self._get_or_create_user(
                         session,
                         request.owner_email or self._default_owner_email,
-                        request.owner_full_name or _SYSTEM_OWNER_NAME,
+                        request.owner_username or _SYSTEM_OWNER_USERNAME,
                     )
                     saved_topic = self._get_or_create_saved_topic(
                         session,
@@ -156,14 +156,14 @@ class GeneratedReportStore:
         self,
         session: Session,
         email: str,
-        full_name: Optional[str],
+        username: Optional[str],
     ) -> User:
         user = session.scalar(select(User).where(User.email == email))
         if user:
-            if full_name and not user.full_name:
-                user.full_name = full_name
+            if username and not user.full_name:
+                user.full_name = username
             return user
-        user = User(email=email, full_name=full_name)
+        user = User(email=email, full_name=username)
         session.add(user)
         session.flush()
         return user
