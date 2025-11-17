@@ -7,7 +7,7 @@ Turn any topic into a structured outline or a polished, audio-friendly report in
 ## Project layout
 
 - `backend/` — FastAPI APIs plus report generation domain logic, prompts, and persistence helpers (see `backend/api` for the HTTP layer).
-- `clients/cli/` — helper CLI tooling for hitting the API and saving generated artifacts.
+- `clients/cli/` — helper CLI tooling for driving the local report generator and saving generated artifacts.
 - `clients/frontend/` — placeholder for the future browser-based surface (see `clients/frontend/README.md`).
 
 ---
@@ -46,37 +46,11 @@ uvicorn backend.api.app:app --reload --port 8000
 
 ---
 
-## Run the helper CLI
+## Generate outlines and reports
 
-`clients/cli/stream_report.py` streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It simply hits the API endpoint you configure (default `http://localhost:8000/generate_report`), so no OpenAI credential is required unless the server you are pointing at expects one in its own environment. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
-Use `--owner-email you@example.com --owner-name "Your Name"` to associate the generated report with a persisted Explorer user record (see “Generated report storage” below).
-Add `--sections 4` (or any positive integer) to the outline/report commands below when you want to force the generated outline to contain exactly four main sections.
+`clients/cli/stream_report.py` streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
 
-## Data model foundation
-
-The domain entities for `User`, `Topic`, and `Report` live in `backend/db/models.py`. They are standard SQLAlchemy 2.0 ORM classes with forward-looking metadata (embeddings, tags, timestamps, etc.). To get started in your own service:
-
-```python
-from backend.db import Base, create_engine_from_url, create_session_factory
-
-# Simple SQLite file for local/dev usage
-engine = create_engine_from_url("sqlite:///reportgen.db")
-Base.metadata.create_all(engine)
-SessionFactory = create_session_factory(engine)
-```
-
-Use `backend.db.session_scope` whenever you need a short-lived transactional scope in scripts or background jobs. When you're ready to move beyond SQLite, install the appropriate driver for your target database (e.g., `psycopg[binary]` for PostgreSQL) and swap the connection URL accordingly.
-
-### Generated report storage
-
-The API now persists each finished report to disk plus SQLite by default. `backend.storage.GeneratedReportStore` creates a directory per user/report under `data/reports/<owner_id>/<report_id>/` containing `outline.json` and `report.md`, and updates the `reports` table with the artifact metadata. Failed generations are discarded automatically, so only completed runs consume storage. Configure this behavior with:
-
-- `EXPLORER_DATABASE_URL` — override the default `sqlite:///reportgen.db`.
-- `EXPLORER_REPORT_STORAGE_DIR` — target a different base directory for persisted artifacts.
-- `EXPLORER_DEFAULT_OWNER_EMAIL` — change the fallback email when the caller does not provide `owner_email`.
-
-When using the CLI, pass `--owner-email` (and optionally `--owner-name`) to write reports under your own user record instead of the default system user.
-Use `scripts/clean_reports.py` whenever you want to purge the on-disk report artifacts (and optionally truncate the `reports` table) between test runs.
+Use `--owner-email you@example.com --owner-name "Your Name"` to associate the generated report with a persisted Explorer user record. Add `--sections 4` (or any positive integer) when you want to force the generated outline to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
 
 ### Outline from a topic
 
@@ -94,7 +68,7 @@ python clients/cli/stream_report.py --topic "Supply chain resilience in 2025" --
 ```
 
 - Streams progress and saves `clients/cli/generated_reports/Supply chain resilience in 2025 report.md`.
-- Send a matching JSON body directly to `/generate_report` when you want to call it from another client.
+- Save the streamed NDJSON (`--raw-stream run.ndjson`) or capture the CLI payload (`--payload-file`) whenever you want to reproduce a run later.
 
 ### Report with your outline
 
@@ -111,7 +85,7 @@ python clients/cli/stream_report.py --payload-file path/to/your_models_payload.j
 ```
 
 - Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator → cleanup). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
-- Fields you omit fall back to the defaults described under `/generate_report`.
+- Fields you omit fall back to the backend defaults.
 
 ### Capture the raw NDJSON stream
 
@@ -123,76 +97,17 @@ python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams
 
 ---
 
-## API endpoints
+## Storage and cleanup
 
-- `GET/POST /generate_outline` — Generate just the outline from a topic.
-- `POST /generate_report` — Produce the full report, optionally supplying a custom outline or model overrides.
+Finished runs are persisted automatically via `backend.storage.GeneratedReportStore`. Each user/report pair creates `outline.json` and `report.md` files under `data/reports/<owner_id>/<report_id>/` plus a row in `reportgen.db`. Failed generations clean themselves up.
 
-### `/generate_outline` request
+Configure storage with:
 
-**Example request payload**
+- `EXPLORER_DATABASE_URL` — override the default `sqlite:///reportgen.db`.
+- `EXPLORER_REPORT_STORAGE_DIR` — point artifact storage somewhere other than `data/reports`.
+- `EXPLORER_DEFAULT_OWNER_EMAIL` — change the fallback owner when the CLI call omits `--owner-email`.
 
-```jsonc
-{
-  "topic": "Supply chain resilience in 2025",
-  "sections": 4,                   // optional: force this many main sections
-  "format": "json",                 // "json" (default) or "markdown"
-  "model": {
-    "model": "gpt-4o-mini"         // default
-  }
-}
-```
-
-**JSON response**
-
-```json
-{
-  "report_title": "Supply Chain Resilience in 2025",
-  "sections": [
-    {"title": "Section 1: ...", "subsections": ["1.1 ...", "1.2 ..."]}
-  ]
-}
-```
-
-> Switch `format` to `markdown` to receive a Markdown outline instead. Provide the same parameters as query string values for the GET variant.
-> The `sections` field works with both JSON bodies and GET query params.
-
-### `/generate_report` request
-
-**Example request payload**
-
-```jsonc
-{
-  "topic": "Supply chain resilience in 2025",
-  "mode": "generate_report",
-  "outline": {
-    "report_title": "Supply Chain Resilience in 2025",
-    "sections": [
-      {"title": "1. Introduction", "subsections": ["1.1 Definition", "1.2 Context"]}
-    ]
-  },
-  "models": {
-    "outline":   {"model": "gpt-4o-mini"},
-    "writer":    {"model": "gpt-4o-mini"},
-    "translator":{"model": "gpt-4o-mini"}
-  },
-  "writer_fallback": "gpt-4o-mini",
-  "return": "report"
-}
-```
-
-**Response**
-
-```json
-{
-  "report_title": "Supply Chain Resilience in 2025",
-  "report": "Full audio-friendly narration...",
-  "outline_used": {...}
-}
-```
-
-Reports come back as plain text headed by the title line, followed by numbered sections (`1:`) and subsections (`1.1:`) for easy narration.
-When you omit the `outline` block, include `sections` in your payload to have the auto-generated outline honor that exact count.
+Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs.
 
 ---
 
