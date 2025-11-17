@@ -7,7 +7,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, TextIO
 
 CLI_DIR = Path(__file__).resolve().parent
 CLIENTS_DIR = CLI_DIR.parent
@@ -130,6 +130,30 @@ def _infer_topic(payload: Dict[str, Any]) -> str | None:
     return None
 
 
+def _apply_generation_options(
+    payload: Dict[str, Any],
+    sections: int | None,
+    subject_inclusions: Optional[List[str]],
+    subject_exclusions: Optional[List[str]],
+) -> Dict[str, Any]:
+    merged_payload = dict(payload)
+    if sections is not None:
+        merged_payload["sections"] = sections
+    if subject_inclusions:
+        merged_payload["subject_inclusions"] = subject_inclusions
+    if subject_exclusions:
+        merged_payload["subject_exclusions"] = subject_exclusions
+    return merged_payload
+
+
+def _validate_generate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        request = GenerateRequest.model_validate(payload)
+    except ValidationError as exc:
+        raise SystemExit(f"Invalid report payload: {exc}") from exc
+    return request.model_dump(by_alias=True)
+
+
 def load_payload(
     payload_file: Path | None,
     topic: str | None,
@@ -149,33 +173,50 @@ def load_payload(
             raise SystemExit(
                 "Payload file must contain a JSON object (mapping of field names to values)."
             )
-        if sections is not None:
-            data["sections"] = sections
-        if subject_inclusions:
-            data["subject_inclusions"] = subject_inclusions
-        if subject_exclusions:
-            data["subject_exclusions"] = subject_exclusions
-        try:
-            GenerateRequest.model_validate(data)
-        except ValidationError as exc:
-            raise SystemExit(f"Invalid report payload: {exc}") from exc
-        return data
+        payload = _apply_generation_options(
+            data,
+            sections,
+            subject_inclusions,
+            subject_exclusions,
+        )
+        return _validate_generate_payload(payload)
 
     if topic is None:
         raise SystemExit("Provide --topic when --payload-file is omitted.")
     payload: Dict[str, Any] = {"topic": topic, "mode": "generate_report"}
-    if sections is not None:
-        payload["sections"] = sections
-    if subject_inclusions:
-        payload["subject_inclusions"] = subject_inclusions
-    if subject_exclusions:
-        payload["subject_exclusions"] = subject_exclusions
+    payload = _apply_generation_options(
+        payload,
+        sections,
+        subject_inclusions,
+        subject_exclusions,
+    )
+    return _validate_generate_payload(payload)
 
+
+def _build_outline_params(
+    topic: str,
+    outline_format: str,
+    sections: int | None,
+    subject_inclusions: List[str],
+    subject_exclusions: List[str],
+) -> Dict[str, Any]:
     try:
-        request = GenerateRequest.model_validate(payload)
+        request = OutlineRequest.model_validate(
+            {
+                "topic": topic,
+                "format": outline_format,
+                "sections": sections,
+                "subject_inclusions": subject_inclusions,
+                "subject_exclusions": subject_exclusions,
+            }
+        )
     except ValidationError as exc:
-        raise SystemExit(f"Invalid report payload: {exc}") from exc
-    return request.model_dump(by_alias=True)
+        raise SystemExit(f"Invalid outline request: {exc}") from exc
+
+    return request.model_dump(
+        exclude={"model"},
+        exclude_none=True,
+    )
 
 
 def _prepare_final_report(final_event: Dict[str, Any]) -> str:
@@ -210,6 +251,62 @@ def _write_text_file(path: Path, contents: str, message: str, show_message: bool
         print(message)
 
 
+def _collect_stream_events(
+    response: httpx.Response,
+    raw_stream_handle: TextIO | None,
+    show_progress: bool,
+) -> Dict[str, Any]:
+    final_event: Dict[str, Any] | None = None
+    for line in response.iter_lines():
+        if line is None:
+            continue
+        line = line.strip()
+        if not line:
+            continue
+        if raw_stream_handle:
+            raw_stream_handle.write(line + "\n")
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            if show_progress:
+                print(line)
+            continue
+        if show_progress:
+            event_for_display = event
+            if event.get("status") == "complete" and "report" in event:
+                event_for_display = {k: v for k, v in event.items() if k != "report"}
+            print(json.dumps(event_for_display))
+        final_event = event
+
+    if not final_event:
+        raise SystemExit("Stream ended without a JSON payload to write.")
+
+    return final_event
+
+
+def _stream_report(
+    url: str,
+    payload: Dict[str, Any],
+    raw_stream: Path | None,
+    show_progress: bool,
+) -> Dict[str, Any]:
+    raw_stream_handle: TextIO | None = None
+    try:
+        if raw_stream:
+            raw_stream.parent.mkdir(parents=True, exist_ok=True)
+            raw_stream_handle = raw_stream.open("w", encoding="utf-8")
+
+        with httpx.Client(timeout=None) as client:
+            with client.stream("POST", url, json=payload) as response:
+                response.raise_for_status()
+                return _collect_stream_events(
+                    response, raw_stream_handle, show_progress
+                )
+    finally:
+        if raw_stream_handle:
+            raw_stream_handle.close()
+
+
 def main() -> None:
     args = parse_args()
     if args.sections is not None and args.sections < 1:
@@ -227,26 +324,13 @@ def main() -> None:
         if target.endswith("/generate_report"):
             target = target.rsplit("/", 1)[0] + "/generate_outline"
 
-        outfile = args.outfile
-        if outfile is None:
-            outfile = _default_outfile(args.topic, "outline", args.format)
-
-        try:
-            outline_request = OutlineRequest.model_validate(
-                {
-                    "topic": args.topic,
-                    "format": args.format,
-                    "sections": args.sections,
-                    "subject_inclusions": subject_inclusions,
-                    "subject_exclusions": subject_exclusions,
-                }
-            )
-        except ValidationError as exc:
-            raise SystemExit(f"Invalid outline request: {exc}") from exc
-
-        params = outline_request.model_dump(
-            exclude={"model"},
-            exclude_none=True,
+        outfile = args.outfile or _default_outfile(args.topic, "outline", args.format)
+        params = _build_outline_params(
+            args.topic,
+            args.format,
+            args.sections,
+            subject_inclusions,
+            subject_exclusions,
         )
 
         with httpx.Client(timeout=None) as client:
@@ -274,44 +358,18 @@ def main() -> None:
     )
 
     inferred_topic = _infer_topic(payload)
-    default_outfile = _default_outfile(inferred_topic, "report") if inferred_topic else GENERATED_REPORTS_DIR / 'report.md'
+    default_outfile = (
+        _default_outfile(inferred_topic, "report")
+        if inferred_topic
+        else GENERATED_REPORTS_DIR / "report.md"
+    )
     outfile = args.outfile or default_outfile
-    final_event: Dict[str, Any] | None = None
-    raw_stream_handle = None
-    if args.raw_stream:
-        args.raw_stream.parent.mkdir(parents=True, exist_ok=True)
-        raw_stream_handle = args.raw_stream.open("w", encoding="utf-8")
-
-    try:
-        with httpx.Client(timeout=None) as client:
-            with client.stream("POST", args.url, json=payload) as response:
-                response.raise_for_status()
-                for line in response.iter_lines():
-                    if line is None:
-                        continue
-                    line = line.strip()
-                    if not line:
-                        continue
-                    if raw_stream_handle:
-                        raw_stream_handle.write(line + "\n")
-                    try:
-                        event = json.loads(line)
-                    except json.JSONDecodeError:
-                        if args.show_progress:
-                            print(line)
-                        continue
-                    if args.show_progress:
-                        event_for_display = event
-                        if event.get("status") == "complete" and "report" in event:
-                            event_for_display = {k: v for k, v in event.items() if k != "report"}
-                        print(json.dumps(event_for_display))
-                    final_event = event
-    finally:
-        if raw_stream_handle:
-            raw_stream_handle.close()
-
-    if not final_event:
-        raise SystemExit("Stream ended without a JSON payload to write.")
+    final_event = _stream_report(
+        args.url,
+        payload,
+        args.raw_stream,
+        args.show_progress,
+    )
 
     report = _prepare_final_report(final_event)
 
