@@ -1,6 +1,6 @@
 # Explorer front end
 
-A minimalist React surface that mirrors ChatGPT's single text bar and streaming conversation pane. Use it to call Explorer's `/generate_report` or `/generate_outline` endpoints without the CLI.
+A minimalist React surface that mirrors ChatGPT's single text bar and streaming conversation pane. Use it to call Explorer's `/generate_report` endpoint without the CLI.
 
 ## Running locally
 
@@ -16,8 +16,8 @@ A minimalist React surface that mirrors ChatGPT's single text bar and streaming 
 
 ### Features
 - Pane layout with a left rail for saved topics and generated report history alongside the chat canvas.
-- Mode toggle to switch between generating long-form topic reports (Topic) and structured outlines (Outline).
-- Streaming NDJSON reader for `/generate_report` plus a markdown outline fetch for `/generate_outline`.
+- Mode toggle to switch between generating long-form topic reports (Topic) and structured outlines that seed report generation (Outline).
+- Streaming NDJSON reader for `/generate_report` so topic and outline submissions stream directly in the UI.
 - Single, stretch-to-fit composer bar with a Stop action while a topic report is streaming.
-- Outline mode swaps in a structured form that forces you to manually list sections/subsections or paste a JSON object before asking for a generated outline.
+- Outline mode builds the outline in-line (either manually or from JSON) and submits it as the structure for report generation.
 - Subtle monochrome styling (Space Grotesk + Inter) that keeps the single text bar and outline builder front and center.

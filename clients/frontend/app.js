@@ -276,10 +276,12 @@ function App() {
         if (finalText && summaryLabel) {
           rememberReport(summaryLabel, finalText);
         }
+        return true;
       } catch (error) {
         updateMessage(assistantId, {
           content: `Something went wrong: ${error.message}`,
         });
+        return false;
       } finally {
         abortRef.current = null;
       }
@@ -420,10 +422,15 @@ function App() {
       setIsRunning(true);
       setOutlineError("");
 
-      await runReportFlow(outlineGeneratePayload, assistantId, topicText);
-
+      const wasSuccessful = await runReportFlow(
+        outlineGeneratePayload,
+        assistantId,
+        topicText
+      );
       setIsRunning(false);
-      resetOutlineForm();
+      if (wasSuccessful) {
+        resetOutlineForm();
+      }
     },
     [
       appendMessage,
