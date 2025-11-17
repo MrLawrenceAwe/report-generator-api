@@ -4,6 +4,7 @@ import os
 import sys
 import threading
 import time
+import uuid
 from pathlib import Path
 
 import httpx
@@ -22,6 +23,7 @@ from backend.models import (
 )
 from backend.outline_service import OutlineService
 from backend.report_service import ReportGeneratorService
+from backend.storage.report_store import StoredReportHandle
 
 
 class StubTextClient:
@@ -42,6 +44,27 @@ class StubTextClient:
 class DummyOutlineService:
     async def generate_outline(self, outline_request):  # pragma: no cover - not used
         raise AssertionError("Outline generation should not be invoked in this test")
+
+
+class NoopReportStore:
+    def __init__(self):
+        base_dir = Path(os.getcwd())
+        self._handle = StoredReportHandle(
+            report_id=uuid.uuid4(),
+            owner_user_id=uuid.uuid4(),
+            report_dir=base_dir,
+            outline_path=base_dir / "noop-outline.json",
+            narrative_path=base_dir / "noop-report.md",
+        )
+
+    def prepare_report(self, request, outline):
+        return self._handle
+
+    def finalize_report(self, handle, narration, written_sections, summary=None):
+        return None
+
+    def discard_report(self, handle):
+        return None
 
 
 class CappedOutlineService(OutlineService):
@@ -74,6 +97,7 @@ def test_report_generator_stream_produces_complete_report():
     service = ReportGeneratorService(
         outline_service=DummyOutlineService(),
         text_client=stub_text_client,
+        report_store=NoopReportStore(),
     )
     request = GenerateRequest.model_validate(
         {
@@ -130,6 +154,7 @@ def test_report_generator_translation_failure_emits_error_event():
     service = ReportGeneratorService(
         outline_service=DummyOutlineService(),
         text_client=stub_text_client,
+        report_store=NoopReportStore(),
     )
     request = GenerateRequest.model_validate(
         {
@@ -182,6 +207,7 @@ def test_report_generator_cleanup_failure_emits_error_event():
     service = ReportGeneratorService(
         outline_service=DummyOutlineService(),
         text_client=stub_text_client,
+        report_store=NoopReportStore(),
     )
     request = GenerateRequest.model_validate(
         {
@@ -235,6 +261,7 @@ def test_report_generator_runs_cleanup_even_when_models_match():
     service = ReportGeneratorService(
         outline_service=DummyOutlineService(),
         text_client=stub_text_client,
+        report_store=NoopReportStore(),
     )
     request = GenerateRequest.model_validate(
         {
@@ -285,6 +312,7 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
     service = ReportGeneratorService(
         outline_service=DummyOutlineService(),
         text_client=stub_text_client,
+        report_store=NoopReportStore(),
     )
     request = GenerateRequest.model_validate(
         {
@@ -416,7 +444,8 @@ def test_report_generator_streams_with_live_openai():
     )
 
     service = ReportGeneratorService(
-        outline_service=CappedOutlineService(max_sections)
+        outline_service=CappedOutlineService(max_sections),
+        report_store=NoopReportStore(),
     )
     events = []
 

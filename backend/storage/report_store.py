@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 from typing import Any, Dict, Iterable, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -18,8 +18,7 @@ from backend.db import (
     Base,
     Report,
     ReportStatus,
-    Topic,
-    TopicVisibility,
+    SavedTopic,
     User,
     create_engine_from_url,
     create_session_factory,
@@ -70,7 +69,6 @@ class GeneratedReportStore:
         """Create DB rows and disk directories prior to section streaming."""
 
         topic_title = self._topic_title(request, outline)
-        description = request.topic
         attempt = 0
         while True:
             handle: Optional[StoredReportHandle] = None
@@ -81,15 +79,14 @@ class GeneratedReportStore:
                         request.owner_email or self._default_owner_email,
                         request.owner_full_name or _SYSTEM_OWNER_NAME,
                     )
-                    topic = self._get_or_create_topic(
+                    saved_topic = self._get_or_create_saved_topic(
                         session,
                         user,
                         topic_title,
-                        description,
                         slug_override=self._generate_slug_variant(topic_title, attempt),
                     )
                     report = Report(
-                        topic=topic,
+                        saved_topic=saved_topic,
                         owner=user,
                         status=ReportStatus.RUNNING,
                         outline_snapshot=outline.model_dump(),
@@ -171,19 +168,18 @@ class GeneratedReportStore:
         session.flush()
         return user
 
-    def _get_or_create_topic(
+    def _get_or_create_saved_topic(
         self,
         session: Session,
         user: User,
         title: str,
-        description: Optional[str],
         *,
         slug_override: Optional[str] = None,
-    ) -> Topic:
+    ) -> SavedTopic:
         existing_topic = session.scalar(
-            select(Topic).where(
-                Topic.owner_user_id == user.id,
-                Topic.title == title,
+            select(SavedTopic).where(
+                SavedTopic.owner_user_id == user.id,
+                SavedTopic.title == title,
             )
         )
         if existing_topic:
@@ -191,17 +187,15 @@ class GeneratedReportStore:
         base_slug = slug_override or _slugify(title)
         slug = base_slug
         while True:
-            existing = session.scalar(select(Topic).where(Topic.slug == slug))
+            existing = session.scalar(select(SavedTopic).where(SavedTopic.slug == slug))
             if existing is None:
                 break
             if existing.owner_user_id == user.id:
                 return existing
             slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
-        topic = Topic(
+        topic = SavedTopic(
             slug=slug,
             title=title,
-            description=description or title,
-            visibility=TopicVisibility.PRIVATE,
             owner=user,
         )
         session.add(topic)
@@ -222,9 +216,15 @@ class GeneratedReportStore:
     def _is_slug_unique_violation(error: IntegrityError) -> bool:
         orig = getattr(error, "orig", None)
         message = str(orig or error).lower()
-        return (
-            "unique constraint" in message or "duplicate key value" in message
-        ) and ("topics.slug" in message or "uq_topics_slug" in message)
+        if "unique constraint" not in message and "duplicate key value" not in message:
+            return False
+        slug_markers = (
+            "saved_topics.slug",
+            "uq_saved_topics_slug",
+            "topics.slug",
+            "uq_topics_slug",
+        )
+        return any(marker in message for marker in slug_markers)
 
     def _build_report_handle(
         self,
@@ -262,5 +262,20 @@ def _slugify(value: str) -> str:
 def _create_default_session_factory() -> sessionmaker[Session]:
     database_url = os.environ.get(_DEFAULT_DB_ENV, _DEFAULT_DB_URL)
     engine = create_engine_from_url(database_url)
+    _ensure_saved_topic_schema(engine)
     Base.metadata.create_all(engine)
     return create_session_factory(engine)
+
+
+def _ensure_saved_topic_schema(engine) -> None:
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    with engine.begin() as connection:
+        if "saved_topics" not in tables and "topics" in tables:
+            connection.execute(text("ALTER TABLE topics RENAME TO saved_topics"))
+        try:
+            report_columns = {column["name"] for column in inspector.get_columns("reports")}
+        except Exception:
+            return
+        if "saved_topic_id" not in report_columns and "topic_id" in report_columns:
+            connection.execute(text("ALTER TABLE reports RENAME COLUMN topic_id TO saved_topic_id"))

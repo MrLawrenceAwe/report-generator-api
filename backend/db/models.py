@@ -81,12 +81,6 @@ class UserStatus(str, enum.Enum):
     SUSPENDED = "suspended"
 
 
-class TopicVisibility(str, enum.Enum):
-    PUBLIC = "public"
-    PRIVATE = "private"
-    ORGANIZATION = "organization"
-
-
 class ReportStatus(str, enum.Enum):
     DRAFT = "draft"
     RUNNING = "running"
@@ -132,19 +126,19 @@ class User(Base, TimestampMixin):
         back_populates="owner",
         passive_deletes=True,
     )
-    topics: Mapped[List["Topic"]] = relationship(
+    saved_topics: Mapped[List["SavedTopic"]] = relationship(
         back_populates="owner",
         passive_deletes=True,
     )
 
 
-class Topic(Base, TimestampMixin, SoftDeleteMixin):
-    """Content topic describing a reusable subject for outlines and reports."""
+class SavedTopic(Base, TimestampMixin, SoftDeleteMixin):
+    """Topic saved by a user. Stores the canonical title referenced by reports."""
 
-    __tablename__ = "topics"
+    __tablename__ = "saved_topics"
     __table_args__ = (
-        UniqueConstraint("slug", name="uq_topics_slug"),
-        Index("ix_topics_owner_visibility", "owner_user_id", "visibility"),
+        UniqueConstraint("slug", name="uq_saved_topics_slug"),
+        Index("ix_saved_topics_owner", "owner_user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -154,40 +148,18 @@ class Topic(Base, TimestampMixin, SoftDeleteMixin):
     )
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    canonical_keywords: Mapped[List[str]] = mapped_column(
-        MutableList.as_mutable(JSON), default=list
-    )
-    industry: Mapped[Optional[str]] = mapped_column(String(100))
-    region: Mapped[Optional[str]] = mapped_column(String(100))
-    visibility: Mapped[TopicVisibility] = mapped_column(
-        Enum(TopicVisibility),
-        default=TopicVisibility.PRIVATE,
-        nullable=False,
-    )
-    owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
         GUID(),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    embedding: Mapped[Optional[List[float]]] = mapped_column(
-        MutableList.as_mutable(JSON)
-    )
-    embedding_model: Mapped[Optional[str]] = mapped_column(String(100))
-    embedding_dimensions: Mapped[Optional[int]] = mapped_column(Integer)
-    tags: Mapped[List[str]] = mapped_column(
-        MutableList.as_mutable(JSON), default=list
-    )
-    extra_metadata: Mapped[Dict[str, Any]] = mapped_column(
-        MutableDict.as_mutable(JSON), default=dict
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     owner: Mapped[Optional[User]] = relationship(
-        back_populates="topics",
+        back_populates="saved_topics",
         passive_deletes=True,
     )
     reports: Mapped[List["Report"]] = relationship(
-        back_populates="topic",
+        back_populates="saved_topic",
         passive_deletes=True,
     )
 
@@ -198,7 +170,7 @@ class Report(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "reports"
     __table_args__ = (
         Index("ix_reports_owner_created_at", "owner_user_id", "created_at"),
-        Index("ix_reports_topic_status", "topic_id", "status"),
+        Index("ix_reports_topic_status", "saved_topic_id", "status"),
         Index("ix_reports_publication", "status", "published_at"),
     )
 
@@ -207,9 +179,9 @@ class Report(Base, TimestampMixin, SoftDeleteMixin):
         primary_key=True,
         default=uuid.uuid4,
     )
-    topic_id: Mapped[uuid.UUID] = mapped_column(
+    saved_topic_id: Mapped[uuid.UUID] = mapped_column(
         GUID(),
-        ForeignKey("topics.id", ondelete="CASCADE"),
+        ForeignKey("saved_topics.id", ondelete="CASCADE"),
         nullable=False,
     )
     owner_user_id: Mapped[uuid.UUID] = mapped_column(
@@ -256,7 +228,7 @@ class Report(Base, TimestampMixin, SoftDeleteMixin):
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_accessed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
-    topic: Mapped[Topic] = relationship(
+    saved_topic: Mapped[SavedTopic] = relationship(
         back_populates="reports",
         passive_deletes=True,
     )
@@ -276,10 +248,9 @@ __all__ = [
     "GUID",
     "Report",
     "ReportStatus",
+    "SavedTopic",
     "SoftDeleteMixin",
     "TimestampMixin",
-    "Topic",
-    "TopicVisibility",
     "User",
     "UserStatus",
 ]
