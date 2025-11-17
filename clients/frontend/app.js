@@ -30,6 +30,30 @@ const DEFAULT_OUTLINE_JSON = JSON.stringify(
   2
 );
 
+function buildOutlineRequestPayload(topic, sections) {
+  const cleanedSections = sections.map((section) => ({
+    title: (section.title || "").trim(),
+    subsections: (section.subsections || [])
+      .map((entry) => (entry || "").trim())
+      .filter(Boolean),
+  }));
+  const subjectInclusions = cleanedSections.flatMap((section) => {
+    const header = section.title ? [`Section: ${section.title}`] : [];
+    const details = section.subsections.map((entry) =>
+      section.title ? `${section.title}: ${entry}` : entry
+    );
+    return [...header, ...details];
+  });
+  const payload = { topic, format: "markdown" };
+  if (cleanedSections.length) {
+    payload.sections = cleanedSections.length;
+  }
+  if (subjectInclusions.length) {
+    payload.subject_inclusions = subjectInclusions;
+  }
+  return payload;
+}
+
 function createEmptyOutlineSection() {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -278,12 +302,12 @@ function App() {
   );
 
   const runOutlineFlow = useCallback(
-    async (prompt, assistantId) => {
+    async (outlineRequest, assistantId) => {
       try {
         const response = await fetch(`${apiBase}/generate_outline`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topic: prompt, format: "markdown" }),
+          body: JSON.stringify(outlineRequest),
         });
         if (!response.ok) {
           throw new Error(`Outline request failed (${response.status}).`);
@@ -333,6 +357,7 @@ function App() {
 
       let outlineBrief = "";
       let userSummary = "";
+      let outlineRequestPayload = null;
 
       if (outlineInputMode === "lines") {
         const normalizedSections = outlineSections
@@ -360,12 +385,17 @@ function App() {
             .join("\n\n"),
         ].join("\n\n");
         userSummary = outlineBrief;
+        outlineRequestPayload = buildOutlineRequestPayload(
+          topicText,
+          normalizedSections
+        );
       } else {
         const trimmedInput = outlineJsonInput.trim();
         if (!trimmedInput) {
           setOutlineError("Paste JSON with sections and subsections.");
           return;
         }
+        let normalizedJsonSections = [];
         try {
           const parsed = JSON.parse(trimmedInput);
           if (
@@ -389,12 +419,27 @@ function App() {
             setOutlineError("Each JSON section needs a title and subsection.");
             return;
           }
+          normalizedJsonSections = parsed.sections.map((section) => ({
+            title: section.title.trim(),
+            subsections: section.subsections
+              .map((entry) => (entry || "").trim())
+              .filter(Boolean),
+          }));
         } catch (error) {
           setOutlineError("Fix the JSON before continuing.");
           return;
         }
         outlineBrief = `Outline topic: ${topicText}\n\nUse this JSON:\n${trimmedInput}`;
         userSummary = outlineBrief;
+        outlineRequestPayload = buildOutlineRequestPayload(
+          topicText,
+          normalizedJsonSections
+        );
+      }
+
+      if (!outlineRequestPayload) {
+        setOutlineError("Unable to prepare the outline request.");
+        return;
       }
 
       const assistantId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -408,7 +453,7 @@ function App() {
       setIsRunning(true);
       setOutlineError("");
 
-      await runOutlineFlow(outlineBrief, assistantId);
+      await runOutlineFlow(outlineRequestPayload, assistantId);
 
       setIsRunning(false);
       resetOutlineForm();
