@@ -12,21 +12,21 @@ Turn any topic into a structured outline or a polished, audio-friendly report in
 
 ---
 
-## Set your OpenAI credential
+## Environment configuration
 
-The Explorer FastAPI service (`uvicorn backend.api.app:app`, or the legacy `uvicorn app:app` entry point) calls OpenAI’s API through the official Python SDK, so it needs your credential. Set these environment variables _in the shell that launches the server_ (and in any other process that will contact OpenAI on your behalf):
+Explorer relies on a handful of environment variables. Export them _in the shell that launches the API or CLI_ (or place them in a `.env` file and `source` it):
 
-```bash
-export OPENAI_API_KEY="sk-your-key"
-# Optional: point at a proxy or gateway
-export OPENAI_BASE_URL="https://api.openai.com/v1"
-```
+- `OPENAI_API_KEY` — required; key used for OpenAI API calls.
+- `OPENAI_BASE_URL` — optional; point at a proxy or compatible gateway.
+- `EXPLORER_DATABASE_URL` — optional; override the default `sqlite:///reportgen.db`.
+- `EXPLORER_REPORT_STORAGE_DIR` — optional; persist artifacts somewhere other than `data/reports`.
+- `EXPLORER_DEFAULT_OWNER_EMAIL` — optional; change the fallback owner for CLI runs.
 
-If you prefer to avoid exporting variables manually, drop them in a `.env` file and source it (`source .env`) before starting the API. When running commands inline, you can also prefix them:
+You can also prefix inline commands:
 
 ```bash
 OPENAI_API_KEY="sk-your-key" uvicorn backend.api.app:app --reload --port 8000
-python clients/cli/stream_report.py --topic "Future of urban farming"
+OPENAI_API_KEY="sk-your-key" python clients/cli/stream_report.py --topic "Future of urban farming"
 ```
 
 ---
@@ -101,20 +101,7 @@ python clients/cli/stream_report.py --topic "Modern Data Governance for AI Teams
 
 Finished runs are persisted automatically via `backend.storage.GeneratedReportStore`. Each user/report pair creates `outline.json` and `report.md` files under `data/reports/<owner_id>/<report_id>/` plus a row in `reportgen.db`. Failed generations clean themselves up.
 
-Configure storage with:
-
-- `EXPLORER_DATABASE_URL` — override the default `sqlite:///reportgen.db`.
-- `EXPLORER_REPORT_STORAGE_DIR` — point artifact storage somewhere other than `data/reports`.
-- `EXPLORER_DEFAULT_OWNER_EMAIL` — change the fallback owner when the CLI call omits `--owner-email`.
-
 Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs.
-
----
-
-## Configuration
-
-- `OPENAI_API_KEY` — required; the key used for every model call.
-- `OPENAI_BASE_URL` — optional; target a proxy or compatible gateway without code changes.
 
 ---
 

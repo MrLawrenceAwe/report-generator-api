@@ -124,20 +124,11 @@ class _ReportStreamRunner:
             if outline is None:
                 return
 
-            if self.report_store:
-                try:
-                    self._storage_handle = self.report_store.prepare_report(
-                        self.request, outline
-                    )
-                except Exception as exception:
-                    async with self.service._emit_status(
-                        {
-                            "status": "error",
-                            "detail": f"Failed to persist outline artifacts: {exception}",
-                        }
-                    ) as status:
-                        yield status
-                    return
+            storage_error = self._prepare_storage(outline)
+            if storage_error:
+                async with self.service._emit_status(storage_error) as status:
+                    yield status
+                return
 
             numbered_sections = self.service._build_numbered_sections(outline)
             all_section_headers = [entry.title for entry in numbered_sections]
@@ -158,37 +149,13 @@ class _ReportStreamRunner:
 
             assembled_narration = self._assembled_narration or ""
 
-            if self.report_store and self._storage_handle:
-                try:
-                    section_payload = [
-                        {"title": section.title, "body": section.body}
-                        for section in self._written_sections
-                    ]
-                    self.report_store.finalize_report(
-                        self._storage_handle, assembled_narration, section_payload
-                    )
-                except Exception as exception:
-                    self._mark_storage_failed(
-                        f"Failed to persist report artifacts: {exception}"
-                    )
-                    async with self.service._emit_status(
-                        {
-                            "status": "error",
-                            "detail": f"Failed to persist report artifacts: {exception}",
-                        }
-                    ) as status:
-                        yield status
-                    return
-                finally:
-                    self._storage_handle = None
+            finalize_error = self._finalize_report_persistence(assembled_narration)
+            if finalize_error:
+                async with self.service._emit_status(finalize_error) as status:
+                    yield status
+                return
 
-            final_payload = {
-                "status": "complete",
-                "report_title": outline.report_title,
-                "report": assembled_narration,
-            }
-            if self.request.return_ == "report_with_outline":
-                final_payload["outline_used"] = outline.model_dump()
+            final_payload = self._build_final_payload(outline, assembled_narration)
 
             async with self.service._emit_status(final_payload) as status:
                 yield status
@@ -260,7 +227,7 @@ class _ReportStreamRunner:
     ) -> AsyncGenerator[Dict[str, Any], None]:
         written_sections: List[WrittenSection] = []
         self._written_sections = written_sections
-        assembled_narration = outline.report_title
+        assembled_blocks: List[str] = [outline.report_title]
 
         for section in numbered_sections:
             section_title = section.title
@@ -350,23 +317,21 @@ class _ReportStreamRunner:
                         yield status
                     return
 
-            cleaned_narration = enforce_subsection_headings(
+            cleaned_narration = self._finalize_section_body(
                 cleaned_narration, subsection_titles
-            ).strip()
+            )
             written_sections.append(
                 WrittenSection(title=section_title, body=cleaned_narration)
             )
 
-            if assembled_narration:
-                assembled_narration += "\n\n"
-            assembled_narration += f"{section_title}\n\n{cleaned_narration}"
+            assembled_blocks.append(f"{section_title}\n\n{cleaned_narration}")
 
             async with self.service._emit_status(
                 {"status": "section_complete", "section": section_title}
             ) as status:
                 yield status
 
-        self._assembled_narration = assembled_narration
+        self._assembled_narration = "\n\n".join(assembled_blocks)
         return
 
     def _build_report_context(
@@ -400,6 +365,61 @@ class _ReportStreamRunner:
                 begin_status, "cleanup_reasoning_effort", self.cleanup_spec
             )
         return begin_status
+
+    def _prepare_storage(self, outline: Outline) -> Optional[Dict[str, Any]]:
+        if not self.report_store:
+            return None
+        try:
+            self._storage_handle = self.report_store.prepare_report(
+                self.request, outline
+            )
+        except Exception as exception:
+            return {
+                "status": "error",
+                "detail": f"Failed to persist outline artifacts: {exception}",
+            }
+        return None
+
+    def _finalize_report_persistence(
+        self, assembled_narration: str
+    ) -> Optional[Dict[str, Any]]:
+        if not self.report_store or not self._storage_handle:
+            return None
+        try:
+            section_payload = [
+                {"title": section.title, "body": section.body}
+                for section in self._written_sections
+            ]
+            self.report_store.finalize_report(
+                self._storage_handle, assembled_narration, section_payload
+            )
+        except Exception as exception:
+            self._mark_storage_failed(f"Failed to persist report artifacts: {exception}")
+            return {
+                "status": "error",
+                "detail": f"Failed to persist report artifacts: {exception}",
+            }
+        finally:
+            self._storage_handle = None
+        return None
+
+    @staticmethod
+    def _finalize_section_body(
+        narration: str, subsection_titles: List[str]
+    ) -> str:
+        return enforce_subsection_headings(narration, subsection_titles).strip()
+
+    def _build_final_payload(
+        self, outline: Outline, assembled_narration: str
+    ) -> Dict[str, Any]:
+        payload = {
+            "status": "complete",
+            "report_title": outline.report_title,
+            "report": assembled_narration,
+        }
+        if self.request.return_ == "report_with_outline":
+            payload["outline_used"] = outline.model_dump()
+        return payload
 
     def _mark_storage_failed(self, detail: str) -> None:
         if not self.report_store or not self._storage_handle:
