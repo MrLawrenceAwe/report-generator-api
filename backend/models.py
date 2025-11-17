@@ -95,6 +95,14 @@ class GenerateRequest(SubjectFilters):
     topic: Optional[str] = None
     mode: Optional[Literal["generate_report"]] = None
     outline: Optional[Outline] = None
+    owner_email: Optional[str] = Field(
+        default=None,
+        description="Email used to associate generated reports with a user profile.",
+    )
+    owner_full_name: Optional[str] = Field(
+        default=None,
+        description="Optional friendly name stored with the owning user record.",
+    )
     models: Dict[str, ModelSpec] = Field(
         default_factory=lambda: {
             "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
@@ -115,4 +123,12 @@ class GenerateRequest(SubjectFilters):
             self.topic = topic
             if self.mode != "generate_report":
                 raise ValueError("When generating from a topic, mode must be 'generate_report'.")
+        if self.owner_email is not None:
+            email = self.owner_email.strip()
+            if not email:
+                raise ValueError("owner_email must contain non-whitespace characters when provided.")
+            self.owner_email = email
+        if self.owner_full_name is not None:
+            normalized = self.owner_full_name.strip()
+            self.owner_full_name = normalized or None
         return self

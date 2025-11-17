@@ -1,3 +1,4 @@
+import asyncio
 import json
 from functools import lru_cache
 from typing import List, Literal, Optional
@@ -8,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from backend.models import GenerateRequest, OutlineRequest, ReasoningEffort
 from backend.outline_service import OutlineParsingError, OutlineService
 from backend.report_service import ReportGeneratorService
+from backend.storage import GeneratedReportStore
 
 app = FastAPI(title="Explorer", version="2.0.0")
 
@@ -19,7 +21,15 @@ def get_outline_service() -> OutlineService:
 
 @lru_cache
 def get_report_service() -> ReportGeneratorService:
-    return ReportGeneratorService(outline_service=get_outline_service())
+    return ReportGeneratorService(
+        outline_service=get_outline_service(),
+        report_store=get_report_store(),
+    )
+
+
+@lru_cache
+def get_report_store() -> GeneratedReportStore:
+    return GeneratedReportStore()
 
 
 @app.api_route("/generate_outline", methods=["GET", "POST"])
@@ -83,6 +93,8 @@ def generate_report(
         try:
             async for event in report_service.stream_report(generate_request):
                 yield json.dumps(event) + "\n"
+        except asyncio.CancelledError:
+            raise
         except Exception as exception:  # pragma: no cover - defensive
             yield json.dumps({"status": "error", "detail": str(exception)}) + "\n"
 

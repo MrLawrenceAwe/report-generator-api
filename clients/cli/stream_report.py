@@ -90,6 +90,14 @@ def parse_args() -> argparse.Namespace:
         action="append",
         help="Avoid this subject entirely. Pass multiple times for multiple subjects.",
     )
+    parser.add_argument(
+        "--owner-email",
+        help="Email used to associate the generated artifacts with a user profile.",
+    )
+    parser.add_argument(
+        "--owner-name",
+        help="Friendly name to store for the owner when --owner-email is provided.",
+    )
     return parser.parse_args()
 
 
@@ -147,6 +155,19 @@ def _apply_generation_options(
     return merged_payload
 
 
+def _apply_owner_metadata(
+    payload: Dict[str, Any],
+    owner_email: Optional[str],
+    owner_name: Optional[str],
+) -> Dict[str, Any]:
+    merged = dict(payload)
+    if owner_email:
+        merged["owner_email"] = owner_email
+    if owner_name:
+        merged["owner_full_name"] = owner_name
+    return merged
+
+
 def _validate_generate_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
         request = GenerateRequest.model_validate(payload)
@@ -161,6 +182,8 @@ def load_payload(
     sections: int | None = None,
     subject_inclusions: Optional[List[str]] = None,
     subject_exclusions: Optional[List[str]] = None,
+    owner_email: Optional[str] = None,
+    owner_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     if payload_file is not None:
         text = payload_file.read_text(encoding="utf-8")
@@ -180,6 +203,7 @@ def load_payload(
             subject_inclusions,
             subject_exclusions,
         )
+        payload = _apply_owner_metadata(payload, owner_email, owner_name)
         return _validate_generate_payload(payload)
 
     if topic is None:
@@ -191,6 +215,7 @@ def load_payload(
         subject_inclusions,
         subject_exclusions,
     )
+    payload = _apply_owner_metadata(payload, owner_email, owner_name)
     return _validate_generate_payload(payload)
 
 
@@ -369,6 +394,8 @@ def main() -> None:
         sections=args.sections,
         subject_inclusions=subject_inclusions,
         subject_exclusions=subject_exclusions,
+        owner_email=args.owner_email,
+        owner_name=args.owner_name,
     )
 
     inferred_topic = _infer_topic(payload)

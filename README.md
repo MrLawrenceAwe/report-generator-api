@@ -49,6 +49,7 @@ uvicorn backend.api.app:app --reload --port 8000
 ## Run the helper CLI
 
 `clients/cli/stream_report.py` streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It simply hits the API endpoint you configure (default `http://localhost:8000/generate_report`), so no OpenAI credential is required unless the server you are pointing at expects one in its own environment. Override any defaults with CLI flags or feed a full JSON payload via `--payload-file`.
+Use `--owner-email you@example.com --owner-name "Your Name"` to associate the generated report with a persisted Explorer user record (see “Generated report storage” below).
 Add `--sections 4` (or any positive integer) to the outline/report commands below when you want to force the generated outline to contain exactly four main sections.
 
 ## Data model foundation
@@ -65,6 +66,16 @@ SessionFactory = create_session_factory(engine)
 ```
 
 Use `backend.db.session_scope` whenever you need a short-lived transactional scope in scripts or background jobs. When you're ready to move beyond SQLite, install the appropriate driver for your target database (e.g., `psycopg[binary]` for PostgreSQL) and swap the connection URL accordingly.
+
+### Generated report storage
+
+The API now persists each finished report to disk plus SQLite by default. `backend.storage.GeneratedReportStore` creates a directory per user/report under `data/reports/<owner_id>/<report_id>/` containing `outline.json` and `report.md`, and updates the `reports` table with the artifact metadata. Failed generations are discarded automatically, so only completed runs consume storage. Configure this behavior with:
+
+- `EXPLORER_DATABASE_URL` — override the default `sqlite:///reportgen.db`.
+- `EXPLORER_REPORT_STORAGE_DIR` — target a different base directory for persisted artifacts.
+- `EXPLORER_DEFAULT_OWNER_EMAIL` — change the fallback email when the caller does not provide `owner_email`.
+
+When using the CLI, pass `--owner-email` (and optionally `--owner-name`) to write reports under your own user record instead of the default system user.
 
 ### Outline from a topic
 

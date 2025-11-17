@@ -24,6 +24,7 @@ from .prompts import (
     build_translation_cleanup_prompt,
 )
 from .report_state import NumberedSection, WrittenSection, WriterState
+from .storage import GeneratedReportStore, StoredReportHandle
 from .summary import should_elevate_context
 
 
@@ -32,11 +33,13 @@ class ReportGeneratorService:
         self,
         outline_service: Optional[OutlineService] = None,
         text_client: Optional[OpenAITextClient] = None,
+        report_store: Optional[GeneratedReportStore] = None,
     ) -> None:
         self.text_client = text_client or get_default_text_client()
         self.outline_service = outline_service or OutlineService(
             text_client=self.text_client
         )
+        self.report_store = report_store or GeneratedReportStore()
 
     async def stream_report(
         self, generate_request: GenerateRequest
@@ -82,6 +85,7 @@ class _ReportStreamRunner:
     ) -> None:
         self.service = service
         self.request = request
+        self.report_store = service.report_store
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -105,46 +109,92 @@ class _ReportStreamRunner:
             ),
         )
         self._encountered_error = False
+        self._storage_handle: Optional[StoredReportHandle] = None
+        self._written_sections: List[WrittenSection] = []
 
     async def run(self) -> AsyncGenerator[Dict[str, Any], None]:
-        async with self.service._emit_status({"status": "started"}) as status:
-            yield status
+        try:
+            async with self.service._emit_status({"status": "started"}) as status:
+                yield status
 
-        self._resolved_outline: Optional[Outline] = None
-        async for status in self._outline_phase():
-            yield status
-        outline = self._resolved_outline
-        if outline is None:
-            return
+            self._resolved_outline: Optional[Outline] = None
+            async for status in self._outline_phase():
+                yield status
+            outline = self._resolved_outline
+            if outline is None:
+                return
 
-        numbered_sections = self.service._build_numbered_sections(outline)
-        all_section_headers = [entry.title for entry in numbered_sections]
+            if self.report_store:
+                try:
+                    self._storage_handle = self.report_store.prepare_report(
+                        self.request, outline
+                    )
+                except Exception as exception:
+                    async with self.service._emit_status(
+                        {
+                            "status": "error",
+                            "detail": f"Failed to persist outline artifacts: {exception}",
+                        }
+                    ) as status:
+                        yield status
+                    return
 
-        begin_status = self._build_begin_sections_status(outline)
-        async with self.service._emit_status(begin_status) as status:
-            yield status
+            numbered_sections = self.service._build_numbered_sections(outline)
+            all_section_headers = [entry.title for entry in numbered_sections]
 
-        self._assembled_narration: Optional[str] = None
-        async for status in self._write_sections(
-            outline, numbered_sections, all_section_headers
-        ):
-            yield status
+            begin_status = self._build_begin_sections_status(outline)
+            async with self.service._emit_status(begin_status) as status:
+                yield status
 
-        if self._encountered_error:
-            return
+            self._assembled_narration: Optional[str] = None
+            async for status in self._write_sections(
+                outline, numbered_sections, all_section_headers
+            ):
+                yield status
 
-        assembled_narration = self._assembled_narration or ""
+            if self._encountered_error:
+                self._mark_storage_failed("Report generation aborted before completion.")
+                return
 
-        final_payload = {
-            "status": "complete",
-            "report_title": outline.report_title,
-            "report": assembled_narration,
-        }
-        if self.request.return_ == "report_with_outline":
-            final_payload["outline_used"] = outline.model_dump()
+            assembled_narration = self._assembled_narration or ""
 
-        async with self.service._emit_status(final_payload) as status:
-            yield status
+            if self.report_store and self._storage_handle:
+                try:
+                    section_payload = [
+                        {"title": section.title, "body": section.body}
+                        for section in self._written_sections
+                    ]
+                    self.report_store.finalize_report(
+                        self._storage_handle, assembled_narration, section_payload
+                    )
+                except Exception as exception:
+                    self._mark_storage_failed(
+                        f"Failed to persist report artifacts: {exception}"
+                    )
+                    async with self.service._emit_status(
+                        {
+                            "status": "error",
+                            "detail": f"Failed to persist report artifacts: {exception}",
+                        }
+                    ) as status:
+                        yield status
+                    return
+                finally:
+                    self._storage_handle = None
+
+            final_payload = {
+                "status": "complete",
+                "report_title": outline.report_title,
+                "report": assembled_narration,
+            }
+            if self.request.return_ == "report_with_outline":
+                final_payload["outline_used"] = outline.model_dump()
+
+            async with self.service._emit_status(final_payload) as status:
+                yield status
+        except asyncio.CancelledError:
+            self._mark_storage_failed("Report generation cancelled")
+            raise
 
     async def _outline_phase(self) -> AsyncGenerator[Dict[str, Any], None]:
         provided_outline = self.request.outline
@@ -209,6 +259,7 @@ class _ReportStreamRunner:
         all_section_headers: List[str],
     ) -> AsyncGenerator[Dict[str, Any], None]:
         written_sections: List[WrittenSection] = []
+        self._written_sections = written_sections
         assembled_narration = outline.report_title
 
         for section in numbered_sections:
@@ -251,9 +302,6 @@ class _ReportStreamRunner:
                     continue
 
             section_text = enforce_subsection_headings(section_text, subsection_titles)
-            written_sections.append(
-                WrittenSection(title=section_title, body=section_text.strip())
-            )
 
             async with self.service._emit_status(
                 {"status": "translating_section", "section": section_title}
@@ -305,6 +353,9 @@ class _ReportStreamRunner:
             cleaned_narration = enforce_subsection_headings(
                 cleaned_narration, subsection_titles
             ).strip()
+            written_sections.append(
+                WrittenSection(title=section_title, body=cleaned_narration)
+            )
 
             if assembled_narration:
                 assembled_narration += "\n\n"
@@ -349,6 +400,14 @@ class _ReportStreamRunner:
                 begin_status, "cleanup_reasoning_effort", self.cleanup_spec
             )
         return begin_status
+
+    def _mark_storage_failed(self, detail: str) -> None:
+        if not self.report_store or not self._storage_handle:
+            return
+        try:
+            self.report_store.discard_report(self._storage_handle)
+        finally:
+            self._storage_handle = None
 
     def _maybe_activate_writer_fallback(
         self, section_title: str, error: str

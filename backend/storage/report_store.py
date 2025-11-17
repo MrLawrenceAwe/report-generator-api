@@ -1,0 +1,266 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+import shutil
+from typing import Any, Dict, Iterable, Optional
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
+
+from backend.db import (
+    Base,
+    Report,
+    ReportStatus,
+    Topic,
+    TopicVisibility,
+    User,
+    create_engine_from_url,
+    create_session_factory,
+    session_scope,
+)
+from backend.models import GenerateRequest, Outline
+
+_DEFAULT_DB_URL = "sqlite:///reportgen.db"
+_DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"
+_DEFAULT_STORAGE_ENV = "EXPLORER_REPORT_STORAGE_DIR"
+_DEFAULT_STORAGE_DIR = "data/reports"
+_DEFAULT_OWNER_EMAIL_ENV = "EXPLORER_DEFAULT_OWNER_EMAIL"
+_SYSTEM_OWNER_EMAIL = "system@explorer.local"
+_SYSTEM_OWNER_NAME = "Explorer System"
+
+_SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
+_TOPIC_RETRY_LIMIT = 3
+
+
+@dataclass(frozen=True)
+class StoredReportHandle:
+    report_id: uuid.UUID
+    owner_user_id: uuid.UUID
+    report_dir: Path
+    outline_path: Path
+    narrative_path: Path
+
+
+class GeneratedReportStore:
+    """Persist generated report metadata plus artifacts to disk."""
+
+    def __init__(
+        self,
+        *,
+        base_dir: Optional[Path | str] = None,
+        session_factory: Optional[sessionmaker[Session]] = None,
+    ) -> None:
+        configured_base = base_dir or os.environ.get(_DEFAULT_STORAGE_ENV, _DEFAULT_STORAGE_DIR)
+        self.base_dir = Path(configured_base).expanduser().resolve()
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self._session_factory = session_factory or _create_default_session_factory()
+        self._default_owner_email = os.environ.get(
+            _DEFAULT_OWNER_EMAIL_ENV,
+            _SYSTEM_OWNER_EMAIL,
+        )
+
+    def prepare_report(self, request: GenerateRequest, outline: Outline) -> StoredReportHandle:
+        """Create DB rows and disk directories prior to section streaming."""
+
+        topic_title = self._topic_title(request, outline)
+        description = request.topic
+        attempt = 0
+        while True:
+            handle: Optional[StoredReportHandle] = None
+            try:
+                with session_scope(self._session_factory) as session:
+                    user = self._get_or_create_user(
+                        session,
+                        request.owner_email or self._default_owner_email,
+                        request.owner_full_name or _SYSTEM_OWNER_NAME,
+                    )
+                    topic = self._get_or_create_topic(
+                        session,
+                        user,
+                        topic_title,
+                        description,
+                        slug_override=self._generate_slug_variant(topic_title, attempt),
+                    )
+                    report = Report(
+                        topic=topic,
+                        owner=user,
+                        status=ReportStatus.RUNNING,
+                        outline_snapshot=outline.model_dump(),
+                        sections={"outline": outline.model_dump(), "written": []},
+                        generated_started_at=datetime.now(timezone.utc),
+                    )
+                    session.add(report)
+                    session.flush()
+                    handle = self._build_report_handle(report.id, user.id)
+                self._write_outline_snapshot(handle, outline)
+                break
+            except IntegrityError as exception:
+                if not self._is_slug_unique_violation(exception):
+                    raise
+                attempt += 1
+                if attempt >= _TOPIC_RETRY_LIMIT:
+                    raise
+                continue
+            except Exception as exception:
+                if handle is not None:
+                    self.discard_report(
+                        handle,
+                    )
+                raise
+        return handle
+
+    def finalize_report(
+        self,
+        handle: StoredReportHandle,
+        narration: str,
+        written_sections: Iterable[Dict[str, Any]],
+        summary: Optional[str] = None,
+    ) -> None:
+        """Persist the final narration and update DB metadata."""
+
+        text = narration.strip() + "\n"
+        handle.narrative_path.parent.mkdir(parents=True, exist_ok=True)
+        handle.narrative_path.write_text(text, encoding="utf-8")
+        sections_payload = list(written_sections)
+        with session_scope(self._session_factory) as session:
+            report = session.get(Report, handle.report_id)
+            if not report:
+                return
+            report.status = ReportStatus.COMPLETE
+            if summary:
+                report.summary = summary
+            report.sections = {"outline": report.outline_snapshot, "written": sections_payload}
+            report.content_uri = self._relative_uri(handle.narrative_path)
+            report.generated_completed_at = datetime.now(timezone.utc)
+
+    def discard_report(self, handle: StoredReportHandle) -> None:
+        """Remove the persisted report row and artifacts when generation fails."""
+
+        self._remove_artifacts(handle)
+        with session_scope(self._session_factory) as session:
+            report = session.get(Report, handle.report_id)
+            if not report:
+                return
+            session.delete(report)
+
+    def _topic_title(self, request: GenerateRequest, outline: Outline) -> str:
+        if isinstance(request.topic, str) and request.topic.strip():
+            return request.topic
+        return outline.report_title
+
+    def _get_or_create_user(
+        self,
+        session: Session,
+        email: str,
+        full_name: Optional[str],
+    ) -> User:
+        user = session.scalar(select(User).where(User.email == email))
+        if user:
+            if full_name and not user.full_name:
+                user.full_name = full_name
+            return user
+        user = User(email=email, full_name=full_name)
+        session.add(user)
+        session.flush()
+        return user
+
+    def _get_or_create_topic(
+        self,
+        session: Session,
+        user: User,
+        title: str,
+        description: Optional[str],
+        *,
+        slug_override: Optional[str] = None,
+    ) -> Topic:
+        existing_topic = session.scalar(
+            select(Topic).where(
+                Topic.owner_user_id == user.id,
+                Topic.title == title,
+            )
+        )
+        if existing_topic:
+            return existing_topic
+        base_slug = slug_override or _slugify(title)
+        slug = base_slug
+        while True:
+            existing = session.scalar(select(Topic).where(Topic.slug == slug))
+            if existing is None:
+                break
+            if existing.owner_user_id == user.id:
+                return existing
+            slug = f"{base_slug}-{uuid.uuid4().hex[:8]}"
+        topic = Topic(
+            slug=slug,
+            title=title,
+            description=description or title,
+            visibility=TopicVisibility.PRIVATE,
+            owner=user,
+        )
+        session.add(topic)
+        session.flush()
+        return topic
+
+    def _generate_slug_variant(self, base_title: str, attempt: int) -> str:
+        if attempt == 0:
+            return _slugify(base_title)
+        suffix = uuid.uuid4().hex[:6]
+        return f"{_slugify(base_title)}-{attempt}-{suffix}"
+
+    def _remove_artifacts(self, handle: StoredReportHandle) -> None:
+        if handle.report_dir.exists():
+            shutil.rmtree(handle.report_dir, ignore_errors=True)
+
+    @staticmethod
+    def _is_slug_unique_violation(error: IntegrityError) -> bool:
+        orig = getattr(error, "orig", None)
+        message = str(orig or error).lower()
+        return (
+            "unique constraint" in message or "duplicate key value" in message
+        ) and ("topics.slug" in message or "uq_topics_slug" in message)
+
+    def _build_report_handle(
+        self,
+        report_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
+    ) -> StoredReportHandle:
+        report_dir = self.base_dir / str(owner_user_id) / str(report_id)
+        report_dir.mkdir(parents=True, exist_ok=True)
+        return StoredReportHandle(
+            report_id=report_id,
+            owner_user_id=owner_user_id,
+            report_dir=report_dir,
+            outline_path=report_dir / "outline.json",
+            narrative_path=report_dir / "report.md",
+        )
+
+    def _write_outline_snapshot(self, handle: StoredReportHandle, outline: Outline) -> None:
+        handle.outline_path.parent.mkdir(parents=True, exist_ok=True)
+        handle.outline_path.write_text(
+            json.dumps(outline.model_dump(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    def _relative_uri(self, path: Path) -> str:
+        try:
+            return str(path.relative_to(self.base_dir))
+        except ValueError:
+            return str(path)
+
+def _slugify(value: str) -> str:
+    candidate = _SLUG_PATTERN.sub("-", value.lower()).strip("-")
+    return candidate or "topic"
+
+
+def _create_default_session_factory() -> sessionmaker[Session]:
+    database_url = os.environ.get(_DEFAULT_DB_ENV, _DEFAULT_DB_URL)
+    engine = create_engine_from_url(database_url)
+    Base.metadata.create_all(engine)
+    return create_session_factory(engine)
