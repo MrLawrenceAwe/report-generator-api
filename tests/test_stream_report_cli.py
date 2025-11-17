@@ -1,8 +1,13 @@
+import json
 from pathlib import Path
 
 import pytest
 
-from clients.cli.stream_report import _prepare_final_report, load_payload
+from clients.cli.stream_report import (
+    _prepare_final_report,
+    load_outline_request_payload,
+    load_payload,
+)
 
 
 def test_load_payload_requires_json_object(tmp_path: Path) -> None:
@@ -47,3 +52,74 @@ def test_prepare_final_report_requires_report_field() -> None:
         _prepare_final_report(event)
 
     assert "'report'" in str(excinfo.value)
+
+
+def test_load_outline_request_payload_uses_payload_file(tmp_path: Path) -> None:
+    payload_file = tmp_path / "outline.json"
+    payload_file.write_text(
+        json.dumps({"topic": "Solar Storage", "format": "json"}), encoding="utf-8"
+    )
+
+    params = load_outline_request_payload(
+        payload_file,
+        topic=None,
+        outline_format="markdown",
+        sections=None,
+        subject_inclusions=[],
+        subject_exclusions=[],
+    )
+
+    assert params["topic"] == "Solar Storage"
+    # Format preference comes from the file when provided.
+    assert params["format"] == "json"
+
+
+def test_load_outline_request_payload_overrides_with_cli_args(tmp_path: Path) -> None:
+    payload_file = tmp_path / "outline.json"
+    payload_file.write_text(json.dumps({"topic": "AI"}), encoding="utf-8")
+
+    params = load_outline_request_payload(
+        payload_file,
+        topic=None,
+        outline_format="markdown",
+        sections=4,
+        subject_inclusions=["robotics"],
+        subject_exclusions=[],
+    )
+
+    assert params["sections"] == 4
+    assert params["subject_inclusions"] == ["robotics"]
+    assert params["format"] == "markdown"
+
+
+def test_load_outline_request_payload_requires_topic(tmp_path: Path) -> None:
+    payload_file = tmp_path / "outline.json"
+    payload_file.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        load_outline_request_payload(
+            payload_file,
+            topic=None,
+            outline_format="markdown",
+            sections=None,
+            subject_inclusions=[],
+            subject_exclusions=[],
+        )
+
+    assert "topic" in str(excinfo.value)
+
+
+def test_load_outline_request_payload_accepts_cli_topic(tmp_path: Path) -> None:
+    payload_file = tmp_path / "outline.json"
+    payload_file.write_text("{}", encoding="utf-8")
+
+    params = load_outline_request_payload(
+        payload_file,
+        topic="Fallback Topic",
+        outline_format="markdown",
+        sections=None,
+        subject_inclusions=[],
+        subject_exclusions=[],
+    )
+
+    assert params["topic"] == "Fallback Topic"
