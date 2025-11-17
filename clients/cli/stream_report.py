@@ -219,30 +219,80 @@ def load_payload(
     return _validate_generate_payload(payload)
 
 
-def _build_outline_params(
-    topic: str,
+def _apply_outline_overrides(
+    payload: Dict[str, Any],
     outline_format: str,
     sections: int | None,
     subject_inclusions: List[str],
     subject_exclusions: List[str],
 ) -> Dict[str, Any]:
+    merged = dict(payload)
+    merged.setdefault("format", outline_format)
+    if sections is not None:
+        merged["sections"] = sections
+    if subject_inclusions:
+        merged["subject_inclusions"] = subject_inclusions
+    if subject_exclusions:
+        merged["subject_exclusions"] = subject_exclusions
+    return merged
+
+
+def _validate_outline_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
-        request = OutlineRequest.model_validate(
-            {
-                "topic": topic,
-                "format": outline_format,
-                "sections": sections,
-                "subject_inclusions": subject_inclusions,
-                "subject_exclusions": subject_exclusions,
-            }
-        )
+        request = OutlineRequest.model_validate(payload)
     except ValidationError as exc:
         raise SystemExit(f"Invalid outline request: {exc}") from exc
-
     return request.model_dump(
         exclude={"model"},
         exclude_none=True,
     )
+
+
+def load_outline_request_payload(
+    payload_file: Path | None,
+    topic: Optional[str],
+    outline_format: str,
+    sections: int | None,
+    subject_inclusions: List[str],
+    subject_exclusions: List[str],
+) -> Dict[str, Any]:
+    if payload_file is None:
+        if topic is None or not topic.strip():
+            raise SystemExit("Provide --topic when requesting an outline.")
+        payload = _apply_outline_overrides(
+            {"topic": topic},
+            outline_format,
+            sections,
+            subject_inclusions,
+            subject_exclusions,
+        )
+        return _validate_outline_request(payload)
+
+    text = payload_file.read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Payload file '{payload_file}' must contain valid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise SystemExit(
+            "Payload file must contain a JSON object (mapping of field names to values)."
+        )
+    payload = _apply_outline_overrides(
+        data,
+        outline_format,
+        sections,
+        subject_inclusions,
+        subject_exclusions,
+    )
+    topic_value = payload.get("topic") or topic
+    if not isinstance(topic_value, str) or not topic_value.strip():
+        raise SystemExit(
+            "Outline payload must include a non-empty 'topic' or provide --topic."
+        )
+    payload["topic"] = topic_value
+    return _validate_outline_request(payload)
 
 
 def _outline_target_url(target: str) -> str:
@@ -359,18 +409,18 @@ def main() -> None:
         args.subject_exclusions, "--subject-exclusion"
     )
     if args.outline:
-        if args.topic is None:
-            raise SystemExit("Provide --topic when requesting an outline.")
         target = _outline_target_url(args.url)
 
-        outfile = args.outfile or _default_outfile(args.topic, "outline", args.format)
-        params = _build_outline_params(
+        params = load_outline_request_payload(
+            args.payload_file,
             args.topic,
             args.format,
             args.sections,
             subject_inclusions,
             subject_exclusions,
         )
+        outline_topic = params.get("topic") or (args.topic or "outline")
+        outfile = args.outfile or _default_outfile(outline_topic, "outline", args.format)
 
         with httpx.Client(timeout=None) as client:
             response = client.get(target, params=params)

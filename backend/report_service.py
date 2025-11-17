@@ -258,12 +258,21 @@ class _ReportStreamRunner:
                         writer_prompt,
                     )
                     break
-                except Exception as exception:
+                except BaseException as exception:
+                    if isinstance(exception, asyncio.CancelledError) or not isinstance(
+                        exception, Exception
+                    ):
+                        raise
                     fallback_status = self._maybe_activate_writer_fallback(
                         section_title, str(exception)
                     )
                     if fallback_status is None:
-                        raise
+                        error_status = self._stage_error_payload(
+                            section_title, "write", exception
+                        )
+                        async with self.service._emit_status(error_status) as status:
+                            yield status
+                        return
                     async with self.service._emit_status(fallback_status) as status:
                         yield status
                     continue
