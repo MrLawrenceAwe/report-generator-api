@@ -237,8 +237,39 @@ function App() {
           body: JSON.stringify(generateRequest),
           signal: abortRef.current.signal,
         });
-        if (!response.ok || !response.body) {
-          throw new Error(`Report request failed (${response.status}).`);
+        if (!response.ok) {
+          let detail = "";
+          try {
+            const raw = await response.text();
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed === "string") {
+                  detail = parsed;
+                } else if (parsed && typeof parsed === "object") {
+                  const extracted = parsed.detail ?? parsed.message;
+                  if (typeof extracted === "string") {
+                    detail = extracted;
+                  } else if (extracted) {
+                    detail = JSON.stringify(extracted);
+                  } else if (parsed.detail === undefined) {
+                    detail = JSON.stringify(parsed);
+                  }
+                } else {
+                  detail = raw.trim();
+                }
+              } catch {
+                detail = raw.trim();
+              }
+            }
+          } catch {
+            /* ignore parsing failures */
+          }
+          const reason = detail ? `: ${detail}` : ".";
+          throw new Error(`Report request failed (${response.status})${reason}`);
+        }
+        if (!response.body) {
+          throw new Error("Report request failed: missing response body.");
         }
         const reader = response.body
           .pipeThrough(new TextDecoderStream())

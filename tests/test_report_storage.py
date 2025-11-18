@@ -9,6 +9,7 @@ from backend.db import (
     Base,
     Report,
     ReportStatus,
+    SavedTopic,
     User,
     create_engine_from_url,
     create_session_factory,
@@ -147,3 +148,49 @@ def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
         user = session.scalar(select(User).where(User.email == placeholder_email))
         assert user is not None
         assert user.full_name == "Real Owner"
+
+
+def _fetch_saved_topic(session_factory, report_id):
+    with session_scope(session_factory) as session:
+        report = session.get(Report, report_id)
+        assert report is not None, "Report row missing"
+        topic = session.get(SavedTopic, report.saved_topic_id)
+        assert topic is not None, "Saved topic missing"
+        return topic
+
+
+def test_prepare_report_trims_request_topic_titles(tmp_path: Path):
+    session_factory = _session_factory()
+    store = GeneratedReportStore(
+        base_dir=tmp_path / "reports", session_factory=session_factory
+    )
+    outline = Outline(report_title="Outline Title", sections=[])
+    request = GenerateRequest.model_validate(
+        {
+            "topic": "   Solar storage growth   ",
+            "mode": "generate_report",
+        }
+    )
+
+    handle = store.prepare_report(request, outline)
+    topic = _fetch_saved_topic(session_factory, handle.report_id)
+    assert topic.title == "Solar storage growth"
+
+
+def test_prepare_report_limits_outline_title_length(tmp_path: Path):
+    session_factory = _session_factory()
+    store = GeneratedReportStore(
+        base_dir=tmp_path / "reports", session_factory=session_factory
+    )
+    long_title = "A" * 300
+    outline = Outline(report_title=long_title, sections=[])
+    request = GenerateRequest.model_validate(
+        {
+            "outline": outline.model_dump(),
+            "return": "report",
+        }
+    )
+
+    handle = store.prepare_report(request, outline)
+    topic = _fetch_saved_topic(session_factory, handle.report_id)
+    assert topic.title == long_title[:255]

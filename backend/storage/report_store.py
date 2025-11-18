@@ -36,6 +36,8 @@ _SYSTEM_OWNER_USERNAME = "Explorer System"
 
 _SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 _TOPIC_RETRY_LIMIT = 3
+_TOPIC_TITLE_MAX_LENGTH = 255
+_FALLBACK_REPORT_TITLE = "Explorer Report"
 
 
 
@@ -154,9 +156,13 @@ class GeneratedReportStore:
             session.delete(report)
 
     def _topic_title(self, request: GenerateRequest, outline: Outline) -> str:
-        if isinstance(request.topic, str) and request.topic.strip():
-            return request.topic
-        return outline.report_title
+        topic = _normalize_topic_title(request.topic)
+        if topic:
+            return topic
+        outline_title = _normalize_topic_title(outline.report_title)
+        if outline_title:
+            return outline_title
+        return _FALLBACK_REPORT_TITLE
 
     def _get_or_create_user(
         self,
@@ -270,3 +276,14 @@ def _create_default_session_factory() -> sessionmaker[Session]:
     engine = create_engine_from_url(database_url)
     Base.metadata.create_all(engine)
     return create_session_factory(engine)
+
+
+def _normalize_topic_title(value: Optional[str]) -> str:
+    if not isinstance(value, str):
+        return ""
+    normalized = value.strip()
+    if not normalized:
+        return ""
+    if len(normalized) > _TOPIC_TITLE_MAX_LENGTH:
+        normalized = normalized[:_TOPIC_TITLE_MAX_LENGTH]
+    return normalized
