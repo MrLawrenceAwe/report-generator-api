@@ -9,7 +9,7 @@ const MAX_SAVED_REPORTS = 6;
 
 const MODE_TABS = [
   { value: "topic", label: "Topic" },
-  { value: "outline", label: "Outline" },
+  { value: "outline", label: "Custom outline" },
 ];
 
 const OUTLINE_INPUT_MODES = [
@@ -489,7 +489,7 @@ function App() {
   }, []);
 
   const composerButtonLabel = isRunning ? "Stop" : "Send";
-  const outlineSubmitLabel = isRunning ? "Working…" : "Generate outline";
+  const outlineSubmitLabel = isRunning ? "Working…" : "Generate report";
 
   const normalizedOutlineTopic = outlineTopic.trim();
   const lineModeValidity = outlineSections.every((section) => {

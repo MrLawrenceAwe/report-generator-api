@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Call the report generation API to fetch either a streamed report or an outline."""
+"""Call the report generation API and stream progress for full reports."""
 from __future__ import annotations
 
 import argparse
@@ -7,8 +7,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, TextIO
-from urllib.parse import urlparse, urlunparse
+from typing import Any, Dict, List, Optional, TextIO
 
 CLI_DIR = Path(__file__).resolve().parent
 CLIENTS_DIR = CLI_DIR.parent
@@ -21,28 +20,17 @@ except ImportError as exception:  # pragma: no cover - dependency check
 
 from pydantic import ValidationError
 
-from backend.models import GenerateRequest, OutlineRequest, normalize_subject_list
+from backend.models import GenerateRequest, normalize_subject_list
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Call the report generation API for either a full report or an outline.",
+        description="Call the report generation API to stream a finished report.",
     )
     parser.add_argument(
         "--url",
         default="http://localhost:8000/generate_report",
-        help="Endpoint to call (default: %(default)s). Automatically adjusted to /generate_outline when --outline is passed.",
-    )
-    parser.add_argument(
-        "--outline",
-        action="store_true",
-        help="Fetch an outline instead of streaming a full report.",
-    )
-    parser.add_argument(
-        "--format",
-        choices=("json", "markdown"),
-        default="markdown",
-        help="Outline format when --outline is used (default: %(default)s).",
+        help="Endpoint to call (default: %(default)s).",
     )
     parser.add_argument(
         "--payload-file",
@@ -57,7 +45,7 @@ def parse_args() -> argparse.Namespace:
         "--outfile",
         type=Path,
         default=None,
-        help="Where to write the output. Defaults to report.md for reports, outline.json or outline.md for outlines.",
+        help="Where to write the output. Defaults to report.md within cli/generated_reports/.",
     )
     parser.add_argument(
         "--raw-stream",
@@ -107,13 +95,10 @@ def _safe_topic_stem(topic: str) -> str:
     return "report"
 
 
-def _default_outfile(topic: str, kind: Literal["report", "outline"], outline_format: str = "markdown") -> Path:
+def _default_report_outfile(topic: str) -> Path:
     stem = _safe_topic_stem(topic)
     base_dir = GENERATED_REPORTS_DIR
-    if kind == "report":
-        return base_dir / f"{stem} report.md"
-    suffix = "md" if outline_format == "markdown" else "json"
-    return base_dir / f"{stem} outline.{suffix}"
+    return base_dir / f"{stem} report.md"
 
 
 def _normalize_subject_args(values: Optional[List[str]], flag_name: str) -> List[str]:
@@ -237,96 +222,6 @@ def _enforce_owner_metadata_requirements(
             raise SystemExit("--owner-username must accompany --owner-email when override flags are provided.")
 
 
-def _apply_outline_overrides(
-    payload: Dict[str, Any],
-    outline_format: str,
-    sections: int | None,
-    subject_inclusions: List[str],
-    subject_exclusions: List[str],
-) -> Dict[str, Any]:
-    merged = dict(payload)
-    merged.setdefault("format", outline_format)
-    if sections is not None:
-        merged["sections"] = sections
-    if subject_inclusions:
-        merged["subject_inclusions"] = subject_inclusions
-    if subject_exclusions:
-        merged["subject_exclusions"] = subject_exclusions
-    return merged
-
-
-def _validate_outline_request(payload: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        request = OutlineRequest.model_validate(payload)
-    except ValidationError as exc:
-        raise SystemExit(f"Invalid outline request: {exc}") from exc
-    params = request.model_dump(
-        exclude={"model"},
-        exclude_none=True,
-    )
-    model_spec = payload.get("model")
-    if isinstance(model_spec, dict):
-        model_value = model_spec.get("model")
-        if isinstance(model_value, str) and model_value.strip():
-            params["model"] = model_value.strip()
-        reasoning = model_spec.get("reasoning_effort")
-        if isinstance(reasoning, str) and reasoning.strip():
-            params["reasoning_effort"] = reasoning.strip()
-    return params
-
-
-def load_outline_request_payload(
-    payload_file: Path | None,
-    topic: Optional[str],
-    outline_format: str,
-    sections: int | None,
-    subject_inclusions: List[str],
-    subject_exclusions: List[str],
-) -> Dict[str, Any]:
-    if payload_file is None:
-        if topic is None or not topic.strip():
-            raise SystemExit("Provide --topic when requesting an outline.")
-        payload = _apply_outline_overrides(
-            {"topic": topic},
-            outline_format,
-            sections,
-            subject_inclusions,
-            subject_exclusions,
-        )
-        return _validate_outline_request(payload)
-
-    data = _load_json_mapping(payload_file)
-    payload = _apply_outline_overrides(
-        data,
-        outline_format,
-        sections,
-        subject_inclusions,
-        subject_exclusions,
-    )
-    topic_value = payload.get("topic") or topic
-    if not isinstance(topic_value, str) or not topic_value.strip():
-        raise SystemExit(
-            "Outline payload must include a non-empty 'topic' or provide --topic."
-        )
-    payload["topic"] = topic_value
-    return _validate_outline_request(payload)
-
-
-def _outline_target_url(target: str) -> str:
-    parsed = urlparse(target)
-    path = parsed.path or ""
-    normalized = path.rstrip("/")
-    suffix = "generate_report"
-    if normalized.endswith(suffix):
-        base_path = normalized[: -len(suffix)]
-        new_path = base_path + "generate_outline"
-        if not new_path.startswith("/"):
-            new_path = "/" + new_path
-    else:
-        new_path = normalized + "/generate_outline" if normalized else "/generate_outline"
-    return urlunparse(parsed._replace(path=new_path))
-
-
 def _prepare_final_report(final_event: Dict[str, Any]) -> str:
     status = final_event.get("status")
     if status != "complete":
@@ -425,36 +320,6 @@ def main() -> None:
     subject_exclusions = _normalize_subject_args(
         args.subject_exclusions, "--subject-exclusion"
     )
-    if args.outline:
-        target = _outline_target_url(args.url)
-
-        params = load_outline_request_payload(
-            args.payload_file,
-            args.topic,
-            args.format,
-            args.sections,
-            subject_inclusions,
-            subject_exclusions,
-        )
-        outline_topic = params.get("topic") or (args.topic or "outline")
-        outfile = args.outfile or _default_outfile(outline_topic, "outline", args.format)
-
-        with httpx.Client(timeout=None) as client:
-            response = client.get(target, params=params)
-            response.raise_for_status()
-            data = response.json()
-
-        if args.format == "json":
-            output_text = json.dumps(data, indent=2) + "\n"
-        else:
-            markdown = data.get("markdown_outline")
-            if not isinstance(markdown, str):
-                raise SystemExit("Outline response missing 'markdown_outline'.")
-            output_text = markdown.strip() + "\n"
-
-        _write_text_file(outfile, output_text, f"Saved outline to {outfile}")
-        return
-
     payload = load_payload(
         args.payload_file,
         args.topic,
@@ -467,7 +332,7 @@ def main() -> None:
 
     inferred_topic = _infer_topic(payload)
     default_outfile = (
-        _default_outfile(inferred_topic, "report")
+        _default_report_outfile(inferred_topic)
         if inferred_topic
         else GENERATED_REPORTS_DIR / "report.md"
     )

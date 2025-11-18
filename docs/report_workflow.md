@@ -1,6 +1,6 @@
 # Report Generation Workflow Guide
 
-Frontends interact with Explorer through two HTTP endpoints hosted by `backend/api/app.py`. This guide summarizes the contracts those endpoints expose, every NDJSON event emitted while streaming a report, and how per-stage model configuration works so new clients can integrate without reverse-engineering the Python services.
+Frontends interact with Explorer through the HTTP endpoints hosted by `backend/api/app.py`. This guide summarizes the contracts those endpoints expose, every NDJSON event emitted while streaming a report, and how per-stage model configuration works so new clients can integrate without reverse-engineering the Python services.
 
 ## API Surface
 
@@ -23,19 +23,9 @@ Optional fields:
 - `writer_fallback` — model name to fall back to if the primary writer errors.
 - `return` — either `"report"` (default) or `"report_with_outline"` to receive the outline in the final payload as `outline_used`.
 
+Standalone outlines are no longer exposed as a client-facing API. Always call `/generate_report`; the backend handles outlining internally and only surfaces the outline snapshot when a report payload opts into `return="report_with_outline"`.
+
 Cancellation propagates directly: clients should treat HTTP disconnects as aborts, and retries must resend the full payload because the backend rolls back the partially written report (see `GeneratedReportStore.discard_report`).
-
-### `GET|POST /generate_outline`
-
-Returns either JSON or Markdown immediate responses. When called via `GET`, supply parameters:
-
-- `topic` (required)
-- `format` (`json` default, accepts `markdown`)
-- `model` (optional override)
-- `reasoning_effort` (`minimal|low|medium|high` when supported by the chosen model)
-- `sections`, `subject_inclusions`, `subject_exclusions` (same semantics as the report endpoint)
-
-`POST` bodies accept a serialized `OutlineRequest`.
 
 ## Stream Events
 

@@ -16,8 +16,8 @@ A minimalist React surface that mirrors ChatGPT's single text bar and streaming 
 
 ### Features
 - Pane layout with a left rail for saved topics and generated report history alongside the chat canvas.
-- Mode toggle to switch between generating long-form topic reports (Topic) and structured outlines that seed report generation (Outline).
-- Streaming NDJSON reader for `/generate_report` so topic and outline submissions stream directly in the UI.
+- Mode toggle to switch between generating long-form topic reports (Topic) and supplying custom outlines that seed report generation (Custom outline).
+- Streaming NDJSON reader for `/generate_report` so topic and custom-outline submissions stream directly in the UI.
 - Single, stretch-to-fit composer bar with a Stop action while a topic report is streaming.
-- Outline mode builds the outline in-line (either manually or from JSON) and submits it as the structure for report generation.
+- Custom outline mode builds the outline in-line (either manually or from JSON) and immediately streams the resulting report (no standalone outline response).
 - Subtle monochrome styling (Space Grotesk + Inter) that keeps the single text bar and outline builder front and center.

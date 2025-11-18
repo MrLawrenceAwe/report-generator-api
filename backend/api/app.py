@@ -1,14 +1,12 @@
 import asyncio
 import json
 from functools import lru_cache
-from typing import List, Literal, Optional
-
-from fastapi import Body, Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.models import GenerateRequest, OutlineRequest, ReasoningEffort
-from backend.outline_service import OutlineParsingError, OutlineService
+from backend.models import GenerateRequest
+from backend.outline_service import OutlineService
 from backend.report_service import ReportGeneratorService
 from backend.storage import GeneratedReportStore
 
@@ -39,58 +37,6 @@ def get_report_service() -> ReportGeneratorService:
 @lru_cache
 def get_report_store() -> GeneratedReportStore:
     return GeneratedReportStore()
-
-
-@app.api_route("/generate_outline", methods=["GET", "POST"])
-async def generate_outline_endpoint(
-    outline_request: Optional[OutlineRequest] = Body(default=None),
-    topic: Optional[str] = Query(None, description="Topic to outline"),
-    outline_format: Literal["json", "markdown"] = Query("json", alias="format"),
-    model: Optional[str] = Query(None, description="Model name override"),
-    reasoning_effort: Optional[ReasoningEffort] = Query(None, description="Reasoning effort when supported"),
-    sections: Optional[int] = Query(
-        None,
-        ge=1,
-        description="Force the outline to include exactly this many main sections.",
-    ),
-    subject_inclusions: Optional[List[str]] = Query(
-        None,
-        description="Subjects the outline must cover. Defaults to none.",
-    ),
-    subject_exclusions: Optional[List[str]] = Query(
-        None,
-        description="Subjects to avoid entirely. Defaults to none.",
-    ),
-    outline_service: OutlineService = Depends(get_outline_service),
-):
-    if outline_request is None:
-        if topic is None or not topic.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="Provide a non-empty topic via query when no JSON body is supplied.",
-            )
-        try:
-            outline_request = outline_service.build_outline_request(
-                topic,
-                outline_format,
-                model,
-                reasoning_effort,
-                sections=sections,
-                subject_inclusions=subject_inclusions,
-                subject_exclusions=subject_exclusions,
-            )
-        except ValueError as exception:
-            raise HTTPException(status_code=400, detail=str(exception)) from exception
-    try:
-        return await outline_service.handle_outline_request(outline_request)
-    except OutlineParsingError as exception:
-        raise HTTPException(
-            status_code=502,
-            detail={
-                "error": f"Failed to parse outline JSON: {exception}",
-                "raw_response": exception.raw_response,
-            },
-        ) from exception
 
 
 @app.post("/generate_report")
