@@ -10,7 +10,7 @@ A minimalist React surface that mirrors ChatGPT's single text bar and streaming 
    ```
 2. Serve the static files (any web server works). For example:
    ```bash
-   python -m http.server 4173 --directory clients/frontend
+   python -m http.server 4173 --directory frontends/web
    ```
 3. Visit `http://localhost:4173`. By default the client targets the same origin it was served from. If your Explorer API runs on a different host/port, append `?apiBase=http://localhost:8000` (or your URL) to override the target. The override is cached in `localStorage` so you only need to set it once.
 

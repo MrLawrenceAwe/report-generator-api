@@ -6,7 +6,7 @@ Frontends interact with Explorer through two HTTP endpoints hosted by `backend/a
 
 ### `POST /generate_report`
 
-Streams an `application/x-ndjson` response where each line is a JSON object shaped like one of the events documented under “Stream events”. Requests are the serialized `backend.models.GenerateRequest` payload (see `clients/cli/stream_report.py::load_payload` for an end-to-end example).
+Streams an `application/x-ndjson` response where each line is a JSON object shaped like one of the events documented under “Stream events”. Requests are the serialized `backend.models.GenerateRequest` payload (see `cli/stream_report.py::load_payload` for an end-to-end example).
 
 Required fields when no outline is supplied:
 
@@ -93,7 +93,7 @@ Failures at any stage trigger `discard_report`, which deletes artifacts and DB r
 
 ## Integration Checklist
 
-1. **Build a typed client.** Mirror `clients/cli/stream_report.py` logic for payload validation, subject-filter cleanup, and owner metadata handling.
+1. **Build a typed client.** Mirror `cli/stream_report.py` logic for payload validation, subject-filter cleanup, and owner metadata handling.
 2. **Handle every stream status.** Map `status` values to UI elements (spinners, per-section progress, fallback alerts, error banners).
 3. **Expose model overrides.** Let power users pick per-stage models and reasoning levels; enforce the backend’s rules before sending the payload so validation errors can appear inline.
 4. **Persist owner data.** Collect both `owner_email` and `owner_username` when the UI creates a run so artifacts link to real users instead of the system default.

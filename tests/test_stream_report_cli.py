@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from clients.cli.stream_report import (
+from cli.stream_report import (
     _prepare_final_report,
     load_outline_request_payload,
     load_payload,

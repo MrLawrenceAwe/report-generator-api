@@ -1,4 +1,4 @@
-"""Entry point for ``python -m clients.cli``."""
+"""Entry point for ``python -m cli``."""
 
 from .stream_report import main
 

@@ -7,8 +7,9 @@ Turn any topic into a structured outline or a polished, audio-friendly report in
 ## Project layout
 
 - `backend/` — FastAPI APIs plus report generation domain logic, prompts, and persistence helpers (see `backend/api` for the HTTP layer).
-- `clients/cli/` — helper CLI tooling for driving the local report generator and saving generated artifacts.
-- `clients/frontend/` — placeholder for the future browser-based surface (see `clients/frontend/README.md`).
+- `cli/` — helper CLI tooling for driving the local report generator and saving generated artifacts.
+- `frontends/web/` — placeholder for the future browser-based surface (see `frontends/web/README.md`).
+- `frontends/ios/` — upcoming native app scaffolding.
 
 ---
 
@@ -26,7 +27,7 @@ You can also prefix inline commands:
 
 ```bash
 OPENAI_API_KEY="sk-your-key" uvicorn backend.api.app:app --reload --port 8000
-OPENAI_API_KEY="sk-your-key" python -m clients.cli.stream_report --topic "Future of urban farming"
+OPENAI_API_KEY="sk-your-key" python -m cli.stream_report --topic "Future of urban farming"
 ```
 
 ---
@@ -48,7 +49,7 @@ uvicorn backend.api.app:app --reload --port 8000
 
 ## Generate outlines and reports
 
-`clients/cli/stream_report.py` (run via `python -m clients.cli.stream_report` or `python -m clients.cli`) streams status updates to your terminal, saves finished artifacts under `clients/cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
+`cli/stream_report.py` (run via `python -m cli.stream_report` or `python -m cli`) streams status updates to your terminal, saves finished artifacts under `cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
 
 Want to build a custom frontend or automate report generation elsewhere? Read `docs/report_workflow.md` for endpoint contracts, NDJSON event sequencing, model override semantics, and persistence notes.
 
@@ -57,25 +58,25 @@ Use `--owner-email you@example.com --owner-username "your_handle"` to associate 
 ### Outline from a topic
 
 ```bash
-python -m clients.cli.stream_report --outline --topic "Supply chain resilience in 2025"
+python -m cli.stream_report --outline --topic "Supply chain resilience in 2025"
 ```
 
-- Produces `clients/cli/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
+- Produces `cli/generated_reports/Supply chain resilience in 2025 outline.md` (add `--format json` to switch to JSON).
 - Save the request payload to a JSON file and pass it back with `--payload-file` to rerun the same call.
 
 ### Report from only a topic (auto-generated outline)
 
 ```bash
-python -m clients.cli.stream_report --topic "Supply chain resilience in 2025" --show-progress
+python -m cli.stream_report --topic "Supply chain resilience in 2025" --show-progress
 ```
 
-- Streams progress and saves `clients/cli/generated_reports/Supply chain resilience in 2025 report.md`.
+- Streams progress and saves `cli/generated_reports/Supply chain resilience in 2025 report.md`.
 - Save the streamed NDJSON (`--raw-stream run.ndjson`) or capture the CLI payload (`--payload-file`) whenever you want to reproduce a run later.
 
 ### Report with your outline
 
 ```bash
-python -m clients.cli.stream_report --payload-file path/to/your_outline_payload.json --show-progress
+python -m cli.stream_report --payload-file path/to/your_outline_payload.json --show-progress
 ```
 
 - Reuses your outline and returns both the outline and finished report (`return="report_with_outline"` in the payload).
@@ -83,7 +84,7 @@ python -m clients.cli.stream_report --payload-file path/to/your_outline_payload.
 ### Report with custom models
 
 ```bash
-python -m clients.cli.stream_report --payload-file path/to/your_models_payload.json --show-progress
+python -m cli.stream_report --payload-file path/to/your_models_payload.json --show-progress
 ```
 
 - Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator → cleanup). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
@@ -92,7 +93,7 @@ python -m clients.cli.stream_report --payload-file path/to/your_models_payload.j
 ### Capture the raw NDJSON stream
 
 ```bash
-python -m clients.cli.stream_report --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
+python -m cli.stream_report --topic "Modern Data Governance for AI Teams" --show-progress --raw-stream run.ndjson
 ```
 
 `httpx` is bundled with `pip install -r requirements.txt`, so reinstalling dependencies per the quickstart keeps the CLI working.
