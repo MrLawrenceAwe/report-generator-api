@@ -748,7 +748,7 @@ function App() {
               </button>
             </div>
             <p className="topic-view__description">
-              Explore related ideas or generate a report directly from this topic.
+              Explore topics related to <strong>{topicViewTopic}</strong>.
             </p>
             <ul className="topic-view__suggestions" aria-label="Suggested related topics">
               {topicViewSuggestions.map((suggestion) => (
