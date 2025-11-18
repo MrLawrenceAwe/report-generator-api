@@ -280,6 +280,48 @@ body::after {
   flex-wrap: wrap;
 }
 
+.topic-view__title-group {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+.topic-view__title-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topic-view__title-input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-strong);
+  padding: 10px 14px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.topic-view__title-input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.topic-view__title--editable {
+  cursor: text;
+}
+
+.topic-view__title--editable:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 4px;
+}
+
 .topic-view__save-link {
   font-size: 0.95rem;
   letter-spacing: 0;

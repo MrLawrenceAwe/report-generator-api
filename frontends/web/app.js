@@ -98,6 +98,8 @@ function App() {
   const [composerValue, setComposerValue] = useState("");
   const [topicViewBarValue, setTopicViewBarValue] = useState("");
   const [topicViewTopic, setTopicViewTopic] = useState("");
+  const [topicViewDraft, setTopicViewDraft] = useState("");
+  const [isTopicEditing, setIsTopicEditing] = useState(false);
   const [mode, setMode] = useState("topic");
   const [outlineTopic, setOutlineTopic] = useState("");
   const [outlineInputMode, setOutlineInputMode] = useState("lines");
@@ -112,6 +114,8 @@ function App() {
   const abortRef = useRef(null);
   const chatEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const topicViewEditorRef = useRef(null);
+  const skipTopicCommitRef = useRef(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -139,6 +143,18 @@ function App() {
     setOutlineError("");
   }, [outlineJsonInput, outlineSections, outlineTopic]);
 
+  useEffect(() => {
+    setTopicViewDraft(topicViewTopic);
+    setIsTopicEditing(false);
+  }, [topicViewTopic]);
+
+  useEffect(() => {
+    if (isTopicEditing) {
+      topicViewEditorRef.current?.focus();
+      topicViewEditorRef.current?.select?.();
+    }
+  }, [isTopicEditing]);
+
   const openTopicView = useCallback((topic) => {
     const normalized = (topic || "").trim();
     if (!normalized) return;
@@ -148,6 +164,68 @@ function App() {
   const closeTopicView = useCallback(() => {
     setTopicViewTopic("");
   }, []);
+
+  const startTopicEditing = useCallback(() => {
+    if (!topicViewTopic) return;
+    skipTopicCommitRef.current = false;
+    setTopicViewDraft(topicViewTopic);
+    setIsTopicEditing(true);
+  }, [topicViewTopic]);
+
+  const cancelTopicEditing = useCallback(() => {
+    skipTopicCommitRef.current = true;
+    setTopicViewDraft(topicViewTopic);
+    setIsTopicEditing(false);
+  }, [topicViewTopic]);
+
+  const commitTopicEdit = useCallback(() => {
+    if (skipTopicCommitRef.current) {
+      skipTopicCommitRef.current = false;
+      return;
+    }
+    const normalized = topicViewDraft.trim();
+    setIsTopicEditing(false);
+    if (normalized && normalized !== topicViewTopic) {
+      setTopicViewTopic(normalized);
+    } else {
+      setTopicViewDraft(topicViewTopic);
+    }
+  }, [topicViewDraft, topicViewTopic]);
+
+  const handleTopicEditSubmit = useCallback(
+    (event) => {
+      event.preventDefault();
+      commitTopicEdit();
+    },
+    [commitTopicEdit]
+  );
+
+  const handleTopicEditBlur = useCallback(() => {
+    commitTopicEdit();
+  }, [commitTopicEdit]);
+
+  const handleTopicEditKeyDown = useCallback(
+    (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelTopicEditing();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        commitTopicEdit();
+      }
+    },
+    [cancelTopicEditing, commitTopicEdit]
+  );
+
+  const handleTopicTitleKeyDown = useCallback(
+    (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        startTopicEditing();
+      }
+    },
+    [startTopicEditing]
+  );
 
   const handleTopicViewBarSubmit = useCallback(
     (event) => {
@@ -711,7 +789,34 @@ function App() {
               <div>
                 <p className="topic-view__eyebrow">Topic view</p>
                 <div className="topic-view__title-row">
-                  <h1 className="topic-view__title">{topicViewTopic}</h1>
+                  <div className="topic-view__title-group">
+                    {isTopicEditing ? (
+                      <form
+                        className="topic-view__title-editor"
+                        onSubmit={handleTopicEditSubmit}
+                      >
+                        <input
+                          ref={topicViewEditorRef}
+                          className="topic-view__title-input"
+                          value={topicViewDraft}
+                          onChange={(event) => setTopicViewDraft(event.target.value)}
+                          onBlur={handleTopicEditBlur}
+                          onKeyDown={handleTopicEditKeyDown}
+                          aria-label="Edit topic title"
+                        />
+                      </form>
+                    ) : (
+                      <h1
+                        className="topic-view__title topic-view__title--editable"
+                        tabIndex={0}
+                        role="button"
+                        onClick={startTopicEditing}
+                        onKeyDown={handleTopicTitleKeyDown}
+                      >
+                        {topicViewTopic}
+                      </h1>
+                    )}
+                  </div>
                   <span
                     className={`topic-view__save-link${isTopicSaved ? " topic-view__save-link--disabled" : ""}`}
                     role="button"
