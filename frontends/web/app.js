@@ -1,4 +1,4 @@
-const { useCallback, useEffect, useRef, useState } = React;
+const { useCallback, useEffect, useMemo, useRef, useState } = React;
 
 const STORAGE_KEY = "explorer-api-base";
 const SAVED_TOPICS_KEY = "explorer-saved-topics";
@@ -6,6 +6,7 @@ const SAVED_REPORTS_KEY = "explorer-saved-reports";
 const DEFAULT_API_BASE = window.location.origin;
 const MAX_SAVED_TOPICS = 8;
 const MAX_SAVED_REPORTS = 6;
+const TOPIC_VIEW_BAR_INPUT_ID = "sidebar-topic-view-bar";
 
 const MODE_TABS = [
   { value: "topic", label: "From Topic" },
@@ -52,6 +53,20 @@ function createEmptyOutlineSection() {
   };
 }
 
+function generateRelatedTopics(topic) {
+  const normalized = (topic || "").trim();
+  if (!normalized) return [];
+  const anchor = normalized.split(/\s+/).slice(0, 3).join(" ") || normalized;
+  const cleanedAnchor = anchor.replace(/^(history of|future of|introduction to|overview of)\s+/i, "").trim() || anchor;
+  const suggestions = [
+    `${cleanedAnchor} overview`,
+    `${cleanedAnchor} applications`,
+    `${cleanedAnchor} challenges`,
+    `Future of ${cleanedAnchor}`,
+  ].map((entry) => entry.replace(/\s+/g, " ").trim());
+  return Array.from(new Set(suggestions));
+}
+
 function loadApiBase() {
   const params = new URL(window.location.href).searchParams;
   const paramBase = params.get("apiBase");
@@ -81,6 +96,8 @@ function App() {
   const [apiBase] = useState(loadApiBase);
   const [messages, setMessages] = useState(() => []);
   const [composerValue, setComposerValue] = useState("");
+  const [topicViewBarValue, setTopicViewBarValue] = useState("");
+  const [topicViewTopic, setTopicViewTopic] = useState("");
   const [mode, setMode] = useState("topic");
   const [outlineTopic, setOutlineTopic] = useState("");
   const [outlineInputMode, setOutlineInputMode] = useState("lines");
@@ -122,13 +139,32 @@ function App() {
     setOutlineError("");
   }, [outlineJsonInput, outlineSections, outlineTopic]);
 
+  const openTopicView = useCallback((topic) => {
+    const normalized = (topic || "").trim();
+    if (!normalized) return;
+    setTopicViewTopic(normalized);
+  }, []);
+
+  const closeTopicView = useCallback(() => {
+    setTopicViewTopic("");
+  }, []);
+
+  const handleTopicViewBarSubmit = useCallback(
+    (event) => {
+      event.preventDefault();
+      const normalized = topicViewBarValue.trim();
+      if (!normalized) return;
+      openTopicView(normalized);
+      setTopicViewBarValue("");
+    },
+    [openTopicView, topicViewBarValue]
+  );
+
   const handleTopicRecall = useCallback(
     (topic) => {
-      if (isRunning) return;
-      setComposerValue(topic);
-      textareaRef.current?.focus();
+      openTopicView(topic);
     },
-    [isRunning]
+    [openTopicView]
   );
 
   const rememberTopic = useCallback((prompt) => {
@@ -327,29 +363,56 @@ function App() {
     [apiBase, rememberReport, updateMessage]
   );
 
+  const runTopicPrompt = useCallback(
+    async (prompt) => {
+      const normalizedPrompt = (prompt || "").trim();
+      if (!normalizedPrompt || isRunning) return false;
+
+      const assistantId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      rememberTopic(normalizedPrompt);
+      appendMessage({
+        id: `${assistantId}-user`,
+        role: "user",
+        content: normalizedPrompt,
+        variant: "topic",
+      });
+      appendMessage({ id: assistantId, role: "assistant", content: "", variant: "topic" });
+      setIsRunning(true);
+      try {
+        await runReportFlow(
+          { topic: normalizedPrompt, mode: "generate_report", return: "report" },
+          assistantId,
+          normalizedPrompt
+        );
+        return true;
+      } finally {
+        setIsRunning(false);
+      }
+    },
+    [appendMessage, isRunning, rememberTopic, runReportFlow]
+  );
+
   const handleTopicSubmit = useCallback(
     async (event) => {
       event.preventDefault();
       const prompt = composerValue.trim();
       if (!prompt || isRunning) return;
-
-      const assistantId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      rememberTopic(prompt);
-      appendMessage({ id: `${assistantId}-user`, role: "user", content: prompt, variant: "topic" });
-      appendMessage({ id: assistantId, role: "assistant", content: "", variant: "topic" });
       setComposerValue("");
-      setIsRunning(true);
-
-      await runReportFlow(
-        { topic: prompt, mode: "generate_report", return: "report" },
-        assistantId,
-        prompt
-      );
-
-      setIsRunning(false);
+      await runTopicPrompt(prompt);
     },
-    [appendMessage, composerValue, isRunning, rememberTopic, runReportFlow]
+    [composerValue, isRunning, runTopicPrompt]
   );
+
+  const handleTopicViewGenerate = useCallback(async () => {
+    if (!topicViewTopic || isRunning) return;
+    closeTopicView();
+    await runTopicPrompt(topicViewTopic);
+  }, [closeTopicView, isRunning, runTopicPrompt, topicViewTopic]);
+
+  const handleTopicViewSave = useCallback(() => {
+    if (!topicViewTopic) return;
+    rememberTopic(topicViewTopic);
+  }, [rememberTopic, topicViewTopic]);
 
   const handleOutlineSubmit = useCallback(
     async (event) => {
@@ -488,7 +551,7 @@ function App() {
     }
   }, []);
 
-  const composerButtonLabel = isRunning ? "Stop" : "Send";
+  const composerButtonLabel = isRunning ? "Stop" : "Generate Report";
   const outlineSubmitLabel = isRunning ? "Working…" : "Generate report";
 
   const normalizedOutlineTopic = outlineTopic.trim();
@@ -528,6 +591,23 @@ function App() {
   const isOutlineFormValid = outlineInputMode === "lines" ? isLineModeValid : isJsonModeValid;
 
   const hasMessages = messages.length > 0;
+  const isTopicViewOpen = Boolean(topicViewTopic);
+  const topicViewSuggestions = useMemo(
+    () => generateRelatedTopics(topicViewTopic),
+    [topicViewTopic]
+  );
+  const isTopicSaved = useMemo(
+    () => savedTopics.some((entry) => entry.prompt === topicViewTopic),
+    [savedTopics, topicViewTopic]
+  );
+  const chatPaneClasses = ["chat-pane"];
+  if (!hasMessages && !isTopicViewOpen) {
+    chatPaneClasses.push("chat-pane--empty");
+  }
+  if (isTopicViewOpen) {
+    chatPaneClasses.push("chat-pane--topic-view");
+  }
+  const chatPaneClassName = chatPaneClasses.join(" ");
 
   const renderModeToggle = (extraClass = "") => (
     <div
@@ -561,6 +641,25 @@ function App() {
             <div className="sidebar__title">Explorer</div>
           </div>
         </div>
+        <section className="sidebar-section sidebar-section--topic-bar">
+          <div className="sidebar-section__header">
+            <h2>Topic View bar</h2>
+          </div>
+          <form className="topic-view-bar" onSubmit={handleTopicViewBarSubmit}>
+            <label htmlFor={TOPIC_VIEW_BAR_INPUT_ID} className="topic-view-bar__label">
+              Topic
+            </label>
+            <input
+              id={TOPIC_VIEW_BAR_INPUT_ID}
+              type="text"
+              value={topicViewBarValue}
+              placeholder="e.g. Microplastics In Oceans"
+              onChange={(event) => setTopicViewBarValue(event.target.value)}
+              autoComplete="off"
+            />
+            <p className="topic-view-bar__hint">Press Enter to open the Topic View.</p>
+          </form>
+        </section>
         <section className="sidebar-section">
           <div className="sidebar-section__header">
             <h2>Saved topics</h2>
@@ -605,188 +704,252 @@ function App() {
           )}
         </section>
       </aside>
-      <main className={`chat-pane${hasMessages ? "" : " chat-pane--empty"}`}>
-        {hasMessages && (
-          <section className="chat-pane__body" aria-live="polite">
-            <ol className="message-list">
-              {messages.map((message) => (
-                <li key={message.id} className={`message message--${message.role}`}>
-                  <div className="message__bubble">
-                    {message.variant === "outline" ? (
-                      <pre>{message.content}</pre>
-                    ) : (
-                      <p>{message.content}</p>
-                    )}
-                  </div>
+      <main className={chatPaneClassName}>
+        {isTopicViewOpen ? (
+          <section className="topic-view" aria-label="Topic overview">
+            <header className="topic-view__header">
+              <div>
+                <p className="topic-view__eyebrow">Topic view</p>
+                <div className="topic-view__title-row">
+                  <h1 className="topic-view__title">{topicViewTopic}</h1>
+                  <span
+                    className={`topic-view__save-link${isTopicSaved ? " topic-view__save-link--disabled" : ""}`}
+                    role="button"
+                    tabIndex={isTopicSaved ? -1 : 0}
+                    onClick={isTopicSaved ? undefined : handleTopicViewSave}
+                    onKeyDown={
+                      isTopicSaved
+                        ? undefined
+                        : (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleTopicViewSave();
+                            }
+                          }
+                    }
+                    aria-disabled={isTopicSaved}
+                  >
+                    {isTopicSaved ? "Saved" : "Save"}
+                  </span>
+                </div>
+              </div>
+              <button type="button" className="topic-view__close" onClick={closeTopicView}>
+                Back
+              </button>
+            </header>
+            <div className="topic-view__actions">
+              <button
+                type="button"
+                className="topic-view__generate"
+                onClick={handleTopicViewGenerate}
+                disabled={isRunning}
+              >
+                {isRunning ? "Working…" : "Generate Report"}
+              </button>
+            </div>
+            <p className="topic-view__description">
+              Explore related ideas or generate a report directly from this topic.
+            </p>
+            <ul className="topic-view__suggestions" aria-label="Suggested related topics">
+              {topicViewSuggestions.map((suggestion) => (
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    className="topic-view__pill"
+                    onClick={() => openTopicView(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
                 </li>
               ))}
-            </ol>
-            <div ref={chatEndRef} />
+            </ul>
           </section>
-        )}
-        {mode === "topic" ? (
-          <div className="composer-lane">
-            {renderModeToggle("mode-toggle--compact")}
-            <form
-              className={`composer${isRunning ? " composer--pending" : ""}`}
-              onSubmit={handleTopicSubmit}
-            >
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={composerValue}
-                onChange={(event) => setComposerValue(event.target.value)}
-                disabled={isRunning && Boolean(abortRef.current)}
-                aria-label="Ask Explorer anything"
-              />
-              <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
-                {composerButtonLabel}
-              </button>
-            </form>
-          </div>
         ) : (
           <>
-            {renderModeToggle("mode-toggle--standalone")}
-            <form
-              className={`outline-composer${isRunning ? " outline-composer--pending" : ""}`}
-              onSubmit={handleOutlineSubmit}
-            >
-              <label className="outline-composer__field">
-                <span className="outline-composer__eyebrow">Topic</span>
-                <input
-                  type="text"
-                  value={outlineTopic}
-                  onChange={(event) => setOutlineTopic(event.target.value)}
-                  disabled={isRunning}
-                />
-              </label>
-              <div className="outline-format-toggle" role="tablist" aria-label="Outline input format">
-                {OUTLINE_INPUT_MODES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="tab"
-                    aria-selected={outlineInputMode === option.value}
-                    className={`outline-format-toggle__option${
-                      outlineInputMode === option.value
-                        ? " outline-format-toggle__option--active"
-                        : ""
-                    }`}
-                    onClick={() => !isRunning && setOutlineInputMode(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            {outlineInputMode === "lines" ? (
-              <div className="outline-lines">
-                <div className="outline-section-list">
-                  {outlineSections.map((section, sectionIndex) => (
-                    <div key={section.id} className="outline-section">
-                      <div className="outline-section__header">
-                        <div className="outline-section__meta">
-                          <span className="outline-section__badge">{sectionIndex + 1}</span>
-                          <input
-                            type="text"
-                            value={section.title}
-                            onChange={(event) =>
-                              handleOutlineSectionTitleChange(section.id, event.target.value)
-                            }
-                            placeholder="Section"
-                            aria-label={`Section ${sectionIndex + 1}`}
-                            disabled={isRunning}
-                          />
-                        </div>
-                        {outlineSections.length > 1 && (
-                          <button
-                            type="button"
-                            className="outline-section__remove"
-                            onClick={() => handleRemoveOutlineSection(section.id)}
-                            disabled={isRunning}
-                          >
-                            Remove
-                          </button>
+            {hasMessages && (
+              <section className="chat-pane__body" aria-live="polite">
+                <ol className="message-list">
+                  {messages.map((message) => (
+                    <li key={message.id} className={`message message--${message.role}`}>
+                      <div className="message__bubble">
+                        {message.variant === "outline" ? (
+                          <pre>{message.content}</pre>
+                        ) : (
+                          <p>{message.content}</p>
                         )}
                       </div>
-                      <div className="outline-subsection-list">
-                        {section.subsections.map((subsection, subsectionIndex) => (
-                          <div key={`${section.id}-${subsectionIndex}`} className="outline-subsection">
-                            <span className="outline-subsection__badge">
-                              {sectionIndex + 1}.{subsectionIndex + 1}
-                            </span>
-                            <input
-                              type="text"
-                              value={subsection}
-                              onChange={(event) =>
-                                handleOutlineSubsectionChange(
-                                  section.id,
-                                  subsectionIndex,
-                                  event.target.value
-                                )
-                              }
-                              placeholder="Subsection"
-                              aria-label={`Section ${sectionIndex + 1} Subsection ${subsectionIndex + 1}`}
+                    </li>
+                  ))}
+                </ol>
+                <div ref={chatEndRef} />
+              </section>
+            )}
+            {mode === "topic" ? (
+              <div className="composer-lane">
+                {renderModeToggle("mode-toggle--compact")}
+                <form
+                  className={`composer${isRunning ? " composer--pending" : ""}`}
+                  onSubmit={handleTopicSubmit}
+                >
+                  <textarea
+                    ref={textareaRef}
+                    rows={1}
+                    value={composerValue}
+                    onChange={(event) => setComposerValue(event.target.value)}
+                    disabled={isRunning && Boolean(abortRef.current)}
+                    aria-label="Ask Explorer anything"
+                  />
+                  <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
+                    {composerButtonLabel}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="outline-pane">
+                {renderModeToggle("mode-toggle--standalone")}
+                <form
+                  className={`outline-composer${isRunning ? " outline-composer--pending" : ""}`}
+                  onSubmit={handleOutlineSubmit}
+                >
+                  <label className="outline-composer__field">
+                    <span className="outline-composer__eyebrow">Topic</span>
+                    <input
+                      type="text"
+                      value={outlineTopic}
+                      onChange={(event) => setOutlineTopic(event.target.value)}
+                      disabled={isRunning}
+                    />
+                  </label>
+                  <div className="outline-format-toggle" role="tablist" aria-label="Outline input format">
+                    {OUTLINE_INPUT_MODES.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={outlineInputMode === option.value}
+                        className={`outline-format-toggle__option${
+                          outlineInputMode === option.value
+                            ? " outline-format-toggle__option--active"
+                            : ""
+                        }`}
+                        onClick={() => !isRunning && setOutlineInputMode(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {outlineInputMode === "lines" ? (
+                    <div className="outline-lines">
+                      <div className="outline-section-list">
+                        {outlineSections.map((section, sectionIndex) => (
+                          <div key={section.id} className="outline-section">
+                            <div className="outline-section__header">
+                              <div className="outline-section__meta">
+                                <span className="outline-section__badge">{sectionIndex + 1}</span>
+                                <input
+                                  type="text"
+                                  value={section.title}
+                                  onChange={(event) =>
+                                    handleOutlineSectionTitleChange(section.id, event.target.value)
+                                  }
+                                  placeholder="Section title"
+                                  aria-label={`Section ${sectionIndex + 1} title`}
+                                  disabled={isRunning}
+                                />
+                              </div>
+                              {outlineSections.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="outline-section__remove"
+                                  onClick={() => handleRemoveOutlineSection(section.id)}
+                                  disabled={isRunning}
+                                  aria-label="Remove section"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                            <div className="outline-subsection-list">
+                              {section.subsections.map((subsection, subsectionIndex) => (
+                                <div key={`${section.id}-${subsectionIndex}`} className="outline-subsection">
+                                  <span className="outline-subsection__badge">
+                                    {sectionIndex + 1}.{subsectionIndex + 1}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={subsection}
+                                    onChange={(event) =>
+                                      handleOutlineSubsectionChange(
+                                        section.id,
+                                        subsectionIndex,
+                                        event.target.value
+                                      )
+                                    }
+                                    placeholder="Subsection"
+                                    aria-label={`Section ${sectionIndex + 1} Subsection ${subsectionIndex + 1}`}
+                                    disabled={isRunning}
+                                  />
+                                  {section.subsections.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveSubsectionLine(section.id, subsectionIndex)
+                                      }
+                                      disabled={isRunning}
+                                      aria-label="Remove subsection"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="outline-add-button"
+                              onClick={() => handleAddSubsectionLine(section.id)}
                               disabled={isRunning}
-                            />
-                            {section.subsections.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleRemoveSubsectionLine(section.id, subsectionIndex)
-                                }
-                                disabled={isRunning}
-                                aria-label="Remove subsection"
-                              >
-                                ×
-                              </button>
-                            )}
+                            >
+                              + Add subsection
+                            </button>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  ) : (
+                    <div className="outline-json-block">
+                      <p className="outline-help">Paste JSON with sections and subsections.</p>
+                      <textarea
+                        className="outline-json-input"
+                        rows={8}
+                        value={outlineJsonInput}
+                        onChange={(event) => setOutlineJsonInput(event.target.value)}
+                        disabled={isRunning}
+                      />
+                      {jsonValidationError && trimmedJsonInput && (
+                        <p className="outline-error outline-error--inline">{jsonValidationError}</p>
+                      )}
+                    </div>
+                  )}
+                  {outlineError && <p className="outline-error">{outlineError}</p>}
+                  <div className="outline-builder__actions">
+                    {outlineInputMode === "lines" && (
                       <button
                         type="button"
-                        className="outline-add-button"
-                        onClick={() => handleAddSubsectionLine(section.id)}
+                        className="outline-add-button outline-add-button--section"
+                        onClick={handleAddOutlineSection}
                         disabled={isRunning}
                       >
-                        + Add subsection
+                        + Add section
                       </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="outline-json-block">
-                <p className="outline-help">Paste JSON with sections and subsections.</p>
-                <textarea
-                  className="outline-json-input"
-                  rows={8}
-                  value={outlineJsonInput}
-                  onChange={(event) => setOutlineJsonInput(event.target.value)}
-                  disabled={isRunning}
-                />
-                {jsonValidationError && trimmedJsonInput && (
-                  <p className="outline-error outline-error--inline">{jsonValidationError}</p>
-                )}
+                    )}
+                    <button type="submit" className="outline-submit" disabled={!isOutlineFormValid || isRunning}>
+                      {outlineSubmitLabel}
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
-            {outlineError && <p className="outline-error">{outlineError}</p>}
-            <div className="outline-builder__actions">
-              {outlineInputMode === "lines" && (
-                <button
-                  type="button"
-                  className="outline-add-button outline-add-button--section"
-                  onClick={handleAddOutlineSection}
-                  disabled={isRunning}
-                >
-                  + Add section
-                </button>
-              )}
-              <button type="submit" className="outline-submit" disabled={!isOutlineFormValid || isRunning}>
-                {outlineSubmitLabel}
-              </button>
-            </div>
-            </form>
           </>
         )}
       </main>
