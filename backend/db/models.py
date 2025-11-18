@@ -106,6 +106,7 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     full_name: Mapped[Optional[str]] = mapped_column(String(200))
+    username: Mapped[Optional[str]] = mapped_column(String(200))
     organization_id: Mapped[Optional[str]] = mapped_column(String(64))
     role: Mapped[Optional[str]] = mapped_column(String(32))
     auth_provider: Mapped[Optional[str]] = mapped_column(String(32))

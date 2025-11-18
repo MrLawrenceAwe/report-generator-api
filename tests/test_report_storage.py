@@ -120,6 +120,7 @@ def test_prepare_report_uses_owner_username_for_custom_users(tmp_path: Path):
         user = session.get(User, handle.owner_user_id)
         assert user is not None
         assert user.full_name == "Custom Owner"
+        assert user.username == "Custom Owner"
 
 
 def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
@@ -129,7 +130,7 @@ def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
 
     placeholder_email = "owner@example.com"
     with session_scope(session_factory) as session:
-        user = User(email=placeholder_email, full_name="Explorer System")
+        user = User(email=placeholder_email, full_name="Explorer System", username="Explorer System")
         session.add(user)
         session.flush()
 
@@ -148,6 +149,7 @@ def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
         user = session.scalar(select(User).where(User.email == placeholder_email))
         assert user is not None
         assert user.full_name == "Real Owner"
+        assert user.username == "Real Owner"
 
 
 def _fetch_saved_topic(session_factory, report_id):

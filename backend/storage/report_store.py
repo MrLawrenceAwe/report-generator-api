@@ -172,10 +172,13 @@ class GeneratedReportStore:
     ) -> User:
         user = session.scalar(select(User).where(User.email == email))
         if user:
-            if username and (not user.full_name or user.full_name == _SYSTEM_OWNER_USERNAME):
-                user.full_name = username
+            if username:
+                if not user.full_name or user.full_name == _SYSTEM_OWNER_USERNAME:
+                    user.full_name = username
+                if not user.username or user.username == _SYSTEM_OWNER_USERNAME:
+                    user.username = username
             return user
-        user = User(email=email, full_name=username)
+        user = User(email=email, full_name=username, username=username)
         session.add(user)
         session.flush()
         return user

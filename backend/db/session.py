@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from .schema_migrations import ensure_lightweight_schema
 
 def create_engine_from_url(
     database_url: str,
@@ -16,12 +17,14 @@ def create_engine_from_url(
 ) -> Engine:
     """Create a SQLAlchemy engine configured for modern 2.0 usage."""
 
-    return create_engine(
+    engine = create_engine(
         database_url,
         echo=echo,
         pool_pre_ping=pool_pre_ping,
         future=True,
     )
+    ensure_lightweight_schema(engine)
+    return engine
 
 
 def create_session_factory(
