@@ -8,13 +8,13 @@ const MAX_SAVED_TOPICS = 8;
 const MAX_SAVED_REPORTS = 6;
 
 const MODE_TABS = [
-  { value: "topic", label: "Topic" },
-  { value: "outline", label: "Custom outline" },
+  { value: "topic", label: "From Topic" },
+  { value: "outline", label: "From Topic & Custom Outline" },
 ];
 
 const OUTLINE_INPUT_MODES = [
   { value: "lines", label: "Manual" },
-  { value: "json", label: "JSON object" },
+  { value: "json", label: "JSON" },
 ];
 
 const DEFAULT_OUTLINE_JSON = JSON.stringify(
@@ -652,12 +652,11 @@ function App() {
               onSubmit={handleOutlineSubmit}
             >
               <label className="outline-composer__field">
-                <span className="outline-composer__eyebrow">Outline topic</span>
+                <span className="outline-composer__eyebrow">Topic</span>
                 <input
                   type="text"
                   value={outlineTopic}
                   onChange={(event) => setOutlineTopic(event.target.value)}
-                  placeholder="e.g., The future of battery recycling"
                   disabled={isRunning}
                 />
               </label>
@@ -681,7 +680,6 @@ function App() {
               </div>
             {outlineInputMode === "lines" ? (
               <div className="outline-lines">
-                <p className="outline-help">List section titles and subsections manually.</p>
                 <div className="outline-section-list">
                   {outlineSections.map((section, sectionIndex) => (
                     <div key={section.id} className="outline-section">
@@ -694,8 +692,8 @@ function App() {
                             onChange={(event) =>
                               handleOutlineSectionTitleChange(section.id, event.target.value)
                             }
-                            placeholder="Section title"
-                            aria-label={`Section ${sectionIndex + 1} title`}
+                            placeholder="Section"
+                            aria-label={`Section ${sectionIndex + 1}`}
                             disabled={isRunning}
                           />
                         </div>
@@ -727,7 +725,7 @@ function App() {
                                 )
                               }
                               placeholder="Subsection"
-                              aria-label={`Section ${sectionIndex + 1} subsection ${subsectionIndex + 1}`}
+                              aria-label={`Section ${sectionIndex + 1} Subsection ${subsectionIndex + 1}`}
                               disabled={isRunning}
                             />
                             {section.subsections.length > 1 && (
