@@ -1,4 +1,4 @@
-# Explorer front end
+# Explorer web front-end
 
 A minimalist React surface that mirrors ChatGPT's single text bar and streaming conversation pane. Use it to call Explorer's `/generate_report` endpoint without the CLI.
 
