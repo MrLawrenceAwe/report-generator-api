@@ -107,7 +107,7 @@ export function OutlineForm({
                                                 aria-label={`Section ${sectionIndex + 1} Subsection ${subsectionIndex + 1}`}
                                                 disabled={isRunning}
                                             />
-                                            {section.subsections.length > 1 && (
+                                            {section.subsections.length > 0 && (
                                                 <button
                                                     type="button"
                                                     onClick={() =>

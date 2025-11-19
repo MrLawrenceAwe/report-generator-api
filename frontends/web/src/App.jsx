@@ -243,7 +243,6 @@ function App() {
     setOutlineSections((current) =>
       current.map((section) => {
         if (section.id !== sectionId) return section;
-        if (section.subsections.length === 1) return section;
         const updated = section.subsections.filter((_, idx) => idx !== index);
         return { ...section, subsections: updated };
       })
@@ -329,9 +328,9 @@ function App() {
               .map((entry) => entry.trim())
               .filter(Boolean),
           }))
-          .filter((section) => section.title && section.subsections.length);
+          .filter((section) => section.title);
         if (!normalizedSections.length) {
-          setOutlineError("Add at least one section and subsection.");
+          setOutlineError("Add at least one section.");
           return;
         }
         outlineBrief = [
@@ -374,11 +373,10 @@ function App() {
               !section ||
               typeof section.title !== "string" ||
               !section.title.trim() ||
-              !Array.isArray(section.subsections) ||
-              !section.subsections.some((entry) => typeof entry === "string" && entry.trim())
+              !Array.isArray(section.subsections)
           );
           if (invalidSection) {
-            setOutlineError("Each JSON section needs a title and subsection.");
+            setOutlineError("Each JSON section needs a title.");
             return;
           }
           normalizedJsonSections = parsed.sections.map((section) => ({
@@ -388,6 +386,7 @@ function App() {
               .filter(Boolean),
           }));
         } catch (error) {
+          console.error(error);
           setOutlineError("Fix the JSON before continuing.");
           return;
         }
@@ -443,8 +442,7 @@ function App() {
   const normalizedOutlineTopic = outlineTopic.trim();
   const lineModeValidity = outlineSections.every((section) => {
     const title = section.title.trim();
-    const hasSubsections = section.subsections.some((line) => line.trim());
-    return Boolean(title && hasSubsections);
+    return Boolean(title);
   });
   const isLineModeValid = Boolean(normalizedOutlineTopic && lineModeValidity);
   const trimmedJsonInput = outlineJsonInput.trim();
@@ -461,11 +459,10 @@ function App() {
             section &&
             typeof section.title === "string" &&
             section.title.trim() &&
-            Array.isArray(section.subsections) &&
-            section.subsections.some((entry) => typeof entry === "string" && entry.trim())
+            Array.isArray(section.subsections)
         )
       ) {
-        jsonValidationError = "Each JSON section needs a title plus at least one subsection.";
+        jsonValidationError = "Each JSON section needs a title.";
       }
     } catch (error) {
       jsonValidationError = error.message || "Enter valid JSON.";
