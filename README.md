@@ -87,14 +87,4 @@ python -m cli.stream_report --topic "Modern Data Governance for AI Teams" --show
 
 ---
 
-## Model notes
 
-- Defaults to GPT-4o mini across outlining, section writing, and translation for consistent tone.
-- Requests go through the OpenAI Responses API; reasoning controls are omitted because they are not supported by GPT-4o mini.
-- Swap in reasoning-capable models as needed (include `reasoning_effort` in the payload and the server forwards it).
-
----
-
-## License
-
-MIT
