@@ -5,3 +5,4 @@ cli/generated_reports/
 __pycache__/
 terminal_command_cheat_sheet.txt
 reportgen.db
+.vscode/settings.json
