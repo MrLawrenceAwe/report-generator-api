@@ -1154,3 +1154,27 @@ body::after {
     color: #ffffff;
   }
 }
+.topic-view__setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.topic-view__setting input {
+  width: 60px;
+  border: 1px solid var(--panel-border-strong);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.topic-view__setting input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}

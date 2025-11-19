@@ -59,6 +59,7 @@ function App() {
   ]);
   const [outlineJsonInput, setOutlineJsonInput] = useState(DEFAULT_OUTLINE_JSON);
   const [outlineError, setOutlineError] = useState("");
+  const [sectionCount, setSectionCount] = useState(3);
 
   const topicViewEditorRef = useRef(null);
   const skipTopicCommitRef = useRef(false);
@@ -266,7 +267,12 @@ function App() {
       setIsRunning(true);
       try {
         await runReportFlow(
-          { topic: normalizedPrompt, mode: "generate_report", return: "report" },
+          {
+            topic: normalizedPrompt,
+            mode: "generate_report",
+            return: "report",
+            sections: sectionCount
+          },
           assistantId,
           normalizedPrompt
         );
@@ -275,7 +281,7 @@ function App() {
         setIsRunning(false);
       }
     },
-    [appendMessage, isRunning, rememberTopic, runReportFlow]
+    [appendMessage, isRunning, rememberTopic, runReportFlow, sectionCount]
   );
 
   const handleTopicSubmit = useCallback(
@@ -544,6 +550,8 @@ function App() {
               handleGenerate: handleTopicViewGenerate,
               handleClose: closeTopicView,
               handleOpenTopic: openTopicView,
+              sectionCount,
+              setSectionCount,
             }}
             editorRef={topicViewEditorRef}
           />

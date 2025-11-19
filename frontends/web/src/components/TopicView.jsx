@@ -83,6 +83,17 @@ export function TopicView({
                 </button>
             </header>
             <div className="topic-view__actions">
+                <label className="topic-view__setting">
+                    <span>Sections:</span>
+                    <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={handlers.sectionCount}
+                        onChange={(e) => handlers.setSectionCount(e.target.value === "" ? "" : parseInt(e.target.value, 10))}
+                        disabled={isRunning}
+                    />
+                </label>
                 <button
                     type="button"
                     className="topic-view__generate"
