@@ -69,11 +69,11 @@ def _rebuild_table(
     conn.execute(text(f'ALTER TABLE "{table.name}" RENAME TO "{temp_name}"'))
 
     metadata = MetaData()
-    new_table = table.tometadata(metadata)
+    new_table = table.to_metadata(metadata)
     for fk in table.foreign_key_constraints:
         referenced = fk.elements[0].column.table
         if referenced.name not in metadata.tables:
-            referenced.tometadata(metadata)
+            referenced.to_metadata(metadata)
     new_table.create(bind=conn)
 
     legacy_set = set(legacy_columns)
