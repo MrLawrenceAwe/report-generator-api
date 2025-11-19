@@ -1178,3 +1178,56 @@ body::after {
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.06);
 }
+
+.section-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.section-selector:focus-within,
+.section-selector:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.section-selector__label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+.section-selector__input {
+  width: 28px;
+  background: transparent;
+  border: none;
+  color: var(--muted-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.section-selector__input::-webkit-outer-spin-button,
+.section-selector__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.section-selector__input:focus {
+  outline: none;
+}
+
+/* Remove old styles */
+.topic-view__setting {
+  display: none;
+}

@@ -566,6 +566,8 @@ function App() {
             handleStop={stopGeneration}
             renderModeToggle={renderModeToggle}
             composerButtonLabel={composerButtonLabel}
+            sectionCount={sectionCount}
+            setSectionCount={setSectionCount}
             outlineForm={
               <OutlineForm
                 outlineTopic={outlineTopic}

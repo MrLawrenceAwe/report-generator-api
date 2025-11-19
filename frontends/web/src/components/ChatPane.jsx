@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { autoResize } from '../utils/helpers';
+import { SectionCountSelector } from './SectionCountSelector';
 
 export function ChatPane({
     messages,
@@ -12,6 +13,8 @@ export function ChatPane({
     renderModeToggle,
     composerButtonLabel,
     outlineForm,
+    sectionCount,
+    setSectionCount,
 }) {
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -62,6 +65,11 @@ export function ChatPane({
                             onChange={(event) => setComposerValue(event.target.value)}
                             disabled={isRunning}
                             aria-label="Ask Explorer anything"
+                        />
+                        <SectionCountSelector
+                            value={sectionCount}
+                            onChange={setSectionCount}
+                            disabled={isRunning}
                         />
                         <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
                             {composerButtonLabel}
