@@ -7,7 +7,7 @@ from pathlib import Path
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from backend.formatting import parse_outline_json
+from backend.utils.formatting import parse_outline_json
 from backend.models import Outline
 
 

@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .formatting import parse_outline_json
-from .models import (
+from backend.utils.formatting import parse_outline_json
+from backend.models import (
     DEFAULT_TEXT_MODEL,
     ModelSpec,
     Outline,
     OutlineRequest,
-    ReasoningEffort,
-    supports_reasoning,
+    Section,
+    SubjectFilters,
 )
-from .openai_client import OpenAITextClient, get_default_text_client
-from .prompts import build_outline_prompt_json, build_outline_prompt_markdown
+from backend.utils.openai_client import OpenAITextClient, get_default_text_client
+from backend.utils.prompts import build_outline_prompt_json, build_outline_prompt_markdown
 
 
 class OutlineService:

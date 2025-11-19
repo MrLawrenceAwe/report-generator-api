@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from backend.models import GenerateRequest
-from backend.outline_service import OutlineService
-from backend.report_service import ReportGeneratorService
+from backend.services.outline_service import OutlineService
+from backend.services.report_service import ReportGeneratorService
 from backend.storage import GeneratedReportStore
 
 app = FastAPI(title="Explorer", version="2.0.0")

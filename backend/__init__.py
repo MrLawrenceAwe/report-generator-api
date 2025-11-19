@@ -1,4 +1,4 @@
-from . import formatting, openai_client, prompts, summary
+from .utils import formatting, openai_client, prompts, summary
 from .models import (
     GenerateRequest,
     ModelSpec,
@@ -6,8 +6,8 @@ from .models import (
     OutlineRequest,
     ReasoningEffort,
     Section,
-    maybe_add_reasoning,
 )
+from .utils.model_utils import maybe_add_reasoning
 
 __all__ = [
     "formatting",

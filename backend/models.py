@@ -6,25 +6,12 @@ from pydantic import BaseModel, Field, model_validator
 
 ReasoningEffort = Literal["minimal", "low", "medium", "high"]
 
-_REASONING_MODEL_PREFIXES = ("gpt-5", "o3", "o4")
-
 DEFAULT_TEXT_MODEL = "gpt-4o-mini"
 
 
 class ModelSpec(BaseModel):
     model: str = Field(default=DEFAULT_TEXT_MODEL, description="Model name, e.g., gpt-4o-mini, gpt-4o")
     reasoning_effort: Optional[ReasoningEffort] = Field(default=None, description="Reasoning effort for reasoning models")
-
-
-def supports_reasoning(model_name: Optional[str]) -> bool:
-    if not model_name:
-        return False
-    return any(model_name.startswith(prefix) for prefix in _REASONING_MODEL_PREFIXES)
-
-
-def maybe_add_reasoning(payload: Dict[str, Any], key: str, model_spec: ModelSpec) -> None:
-    if model_spec.reasoning_effort and supports_reasoning(model_spec.model):
-        payload[key] = model_spec.reasoning_effort
 
 
 class Section(BaseModel):

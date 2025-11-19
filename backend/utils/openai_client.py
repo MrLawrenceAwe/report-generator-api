@@ -6,7 +6,8 @@ from typing import Any, Dict, Optional
 
 from openai import AsyncOpenAI, OpenAI
 
-from .models import ModelSpec, supports_reasoning
+from backend.models import ModelSpec
+from backend.utils.model_utils import supports_reasoning
 
 
 class OpenAITextClient:

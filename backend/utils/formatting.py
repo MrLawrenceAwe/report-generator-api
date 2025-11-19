@@ -4,7 +4,7 @@ import re
 from json import JSONDecodeError, JSONDecoder
 from typing import List
 
-from .models import Outline
+from backend.models import Outline
 
 _SECTION_LABEL_RE = re.compile(r"Section\s+(\d+(?:\.\d+)*)\s*[:.-]?\s*(.*)", re.IGNORECASE)
 _NUMBER_PREFIX_RE = re.compile(r"^(\d+(?:\.\d+)*)\s*[:.-]?\s*(.*)$")

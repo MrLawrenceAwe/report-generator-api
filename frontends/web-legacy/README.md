@@ -1,0 +1,19 @@
+# Explorer web front-end
+
+## Running locally
+
+1. Start the FastAPI service:
+   ```bash
+   uvicorn backend.api.app:app --reload --port 8000
+   ```
+2. Serve the static files (any web server works). For example:
+   ```bash
+   python -m http.server 4173 --directory frontends/web
+   ```
+3. Visit `http://localhost:4173`. By default the client targets the same origin it was served from. If your Explorer API runs on a different host/port, append `?apiBase=http://localhost:8000` (or your URL) to override the target. The override is cached in `localStorage` so you only need to set it once.
+
+### Features
+- Pane layout with a left rail for saved topics and generated report history alongside the chat canvas.
+- Mode toggle to switch between generating reports from a topic (Topic) and supplying custom outlines that seed report generation (Custom outline).
+- Single, stretch-to-fit composer bar. 
+- Custom outline mode builds the outline in-line (either manually or from JSON).

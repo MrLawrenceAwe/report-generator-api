@@ -21,8 +21,8 @@ from backend.models import (
     Outline,
     Section,
 )
-from backend.outline_service import OutlineService
-from backend.report_service import ReportGeneratorService
+from backend.services.outline_service import OutlineService
+from backend.services.report_service import ReportGeneratorService
 from backend.storage.report_store import StoredReportHandle
 
 

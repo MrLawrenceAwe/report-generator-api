@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
-from .models import ModelSpec
+from backend.models import ModelSpec
 
 
 @dataclass

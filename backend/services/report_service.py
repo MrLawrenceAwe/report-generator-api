@@ -4,28 +4,29 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from .formatting import (
+from backend.utils.formatting import (
     ensure_section_numbering,
     ensure_subsection_numbering,
     enforce_subsection_headings,
 )
-from .models import (
+from backend.models import (
     DEFAULT_TEXT_MODEL,
     GenerateRequest,
     ModelSpec,
     Outline,
-    maybe_add_reasoning,
+    Section,
 )
-from .openai_client import OpenAITextClient, get_default_text_client
+from backend.utils.model_utils import maybe_add_reasoning
+from backend.utils.openai_client import OpenAITextClient, get_default_text_client
 from .outline_service import OutlineParsingError, OutlineService
-from .prompts import (
+from backend.utils.prompts import (
     build_section_translator_prompt,
     build_section_writer_prompt,
     build_translation_cleanup_prompt,
 )
 from .report_state import NumberedSection, WrittenSection, WriterState
-from .storage import GeneratedReportStore, StoredReportHandle
-from .summary import should_elevate_context
+from backend.storage import GeneratedReportStore, StoredReportHandle
+from backend.utils.summary import should_elevate_context
 
 
 class ReportGeneratorService:

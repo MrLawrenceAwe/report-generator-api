@@ -1,19 +1,16 @@
-# Explorer web front-end
+# React + Vite
 
-## Running locally
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-1. Start the FastAPI service:
-   ```bash
-   uvicorn backend.api.app:app --reload --port 8000
-   ```
-2. Serve the static files (any web server works). For example:
-   ```bash
-   python -m http.server 4173 --directory frontends/web
-   ```
-3. Visit `http://localhost:4173`. By default the client targets the same origin it was served from. If your Explorer API runs on a different host/port, append `?apiBase=http://localhost:8000` (or your URL) to override the target. The override is cached in `localStorage` so you only need to set it once.
+Currently, two official plugins are available:
 
-### Features
-- Pane layout with a left rail for saved topics and generated report history alongside the chat canvas.
-- Mode toggle to switch between generating reports from a topic (Topic) and supplying custom outlines that seed report generation (Custom outline).
-- Single, stretch-to-fit composer bar. 
-- Custom outline mode builds the outline in-line (either manually or from JSON).
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
