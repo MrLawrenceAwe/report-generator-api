@@ -1,16 +1,35 @@
-# React + Vite
+# Explorer Web Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React application for the Explorer Copilot, built with Vite.
 
-Currently, two official plugins are available:
+## Running Locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **Start the Backend**:
+   Ensure the FastAPI service is running (usually on port 8000):
+   ```bash
+   # From the project root
+   uvicorn backend.api.app:app --reload --port 8000
+   ```
 
-## React Compiler
+2. **Start the Frontend**:
+   ```bash
+   cd frontends/web
+   npm install  # If you haven't already
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+3. **Visit the App**:
+   Open `http://localhost:5173` in your browser.
 
-## Expanding the ESLint configuration
+   *Note: If your API runs on a different host/port, you can override the API base by appending `?apiBase=http://your-api-url` to the URL. This setting is cached in `localStorage`.*
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Features
+
+- **Pane Layout**: A responsive interface with a sidebar for saved topics and generated report history alongside the main chat canvas.
+- **Dual Modes**:
+    - **Topic Mode**: Generate reports directly from a topic prompt.
+    - **Custom Outline Mode**: Seed report generation with a custom outline (manually built or pasted as JSON).
+- **Interactive UI**:
+    - Stretch-to-fit composer bar.
+    - In-line outline builder.
+    - Real-time report streaming.
