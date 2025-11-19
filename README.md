@@ -8,7 +8,7 @@ Turn any topic into a polished, audio-friendly report anchored by a structured o
 
 - `backend/` — FastAPI APIs plus report generation domain logic, prompts, and persistence helpers (see `backend/api` for the HTTP layer).
 - `cli/` — helper CLI tooling for driving the local report generator and saving generated artifacts.
-- `frontends/web/` — placeholder for the future browser-based surface (see `frontends/web/README.md`).
+- `frontends/web/` — web front-end (see `frontends/web/README.md`).
 - `frontends/ios/` — upcoming native app scaffolding.
 
 ---
@@ -50,12 +50,6 @@ uvicorn backend.api.app:app --reload --port 8000
 ## Generate reports
 
 `cli/stream_report.py` (run via `python -m cli.stream_report` or `python -m cli`) streams status updates to your terminal, saves finished artifacts under `cli/generated_reports/`, and can optionally persist the raw NDJSON stream. It talks to the FastAPI service you launched in the quickstart, but the HTTP layer is an internal implementation detail—you interact with Explorer through this CLI.
-
-Want to build a custom frontend or automate report generation elsewhere? Read `docs/report_workflow.md` for endpoint contracts, NDJSON event sequencing, model override semantics, and persistence notes.
-
-Use `--owner-email you@example.com --owner-username "your_handle"` to associate the generated report with a persisted Explorer user record (both fields are required together). Add `--sections 4` (or any positive integer) when you want to force the generated outline (and therefore report) to contain exactly four main sections. Subject filters are also supported: repeat `--subject-inclusion "robotics"` and/or `--subject-exclusion "celebrity gossip"` to steer content without editing JSON payloads manually.
-
-Outlines are generated (or reused) strictly inside the report flow now—frontends and the CLI no longer expose a “outline-only” mode.
 
 ### Report from only a topic (auto-generated outline)
 
