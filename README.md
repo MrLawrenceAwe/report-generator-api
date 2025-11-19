@@ -60,7 +60,7 @@ python -m cli.stream_report --topic "Supply chain resilience in 2025" --show-pro
 - Streams progress and saves `cli/generated_reports/Supply chain resilience in 2025 report.md`.
 - Save the streamed NDJSON (`--raw-stream run.ndjson`) or capture the CLI payload (`--payload-file`) whenever you want to reproduce a run later.
 
-### Report with your outline
+### Report with custom outline
 
 ```bash
 python -m cli.stream_report --payload-file path/to/your_outline_payload.json --show-progress
@@ -84,14 +84,6 @@ python -m cli.stream_report --topic "Modern Data Governance for AI Teams" --show
 ```
 
 `httpx` is bundled with `pip install -r requirements.txt`, so reinstalling dependencies per the quickstart keeps the CLI working.
-
----
-
-## Storage and cleanup
-
-Finished runs are persisted automatically via `backend.storage.GeneratedReportStore`. Each user/report pair creates `outline.json` and `report.md` files under `data/reports/<owner_id>/<report_id>/` plus a row in `reportgen.db`. Failed generations clean themselves up.
-
-Use `scripts/clean_reports.py` to wipe on-disk artifacts and (optionally) truncate the `reports` table between test runs. When schema changes land (like the Saved Topics rename), drop `reportgen.db` before restarting the API so the schema stays up-to-date.
 
 ---
 
