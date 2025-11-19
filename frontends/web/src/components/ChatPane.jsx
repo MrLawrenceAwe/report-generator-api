@@ -63,6 +63,12 @@ export function ChatPane({
                             rows={1}
                             value={composerValue}
                             onChange={(event) => setComposerValue(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' && !event.shiftKey) {
+                                    event.preventDefault();
+                                    handleTopicSubmit(event);
+                                }
+                            }}
                             disabled={isRunning}
                             aria-label="Ask Explorer anything"
                         />
