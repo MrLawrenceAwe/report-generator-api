@@ -9,7 +9,7 @@ Turn any topic into a polished, audio-friendly report anchored by a structured o
 - `backend/` — FastAPI APIs plus report generation domain logic, prompts, and persistence helpers (see `backend/api` for the HTTP layer).
 - `cli/` — helper CLI tooling for driving the local report generator and saving generated artifacts.
 - `frontends/web/` — web front-end (see `frontends/web/README.md`).
-- `frontends/ios/` — upcoming native app scaffolding.
+- `frontends/ios/` — upcoming ios app.
 
 ---
 
