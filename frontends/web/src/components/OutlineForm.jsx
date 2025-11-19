@@ -70,7 +70,7 @@ export function OutlineForm({
                                             onChange={(event) =>
                                                 handleSectionTitleChange(section.id, event.target.value)
                                             }
-                                            placeholder="Section title"
+                                            placeholder="Section"
                                             aria-label={`Section ${sectionIndex + 1} title`}
                                             disabled={isRunning}
                                         />
