@@ -691,7 +691,9 @@ body::after {
   border: 1px solid var(--panel-border-strong);
   border-radius: 16px;
   padding: 12px 14px;
-  font: inherit;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
   background: rgba(255, 255, 255, 0.02);
   color: inherit;
 }
@@ -742,7 +744,9 @@ body::after {
   border: 1px solid var(--panel-border-strong);
   border-radius: 16px;
   padding: 12px 14px;
-  font: inherit;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
   background: rgba(255, 255, 255, 0.02);
   color: inherit;
 }
@@ -917,7 +921,9 @@ body::after {
   .outline-submit {
     width: 100%;
   }
-}@media (prefers-color-scheme: light) {
+}
+
+@media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
     --bg: #f0f2f5;
@@ -1142,5 +1148,9 @@ body::after {
     background: #ffffff;
     border-color: #94a3b8;
     outline: none;
+  }
+
+  .outline-submit {
+    color: #ffffff;
   }
 }

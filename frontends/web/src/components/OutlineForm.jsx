@@ -128,7 +128,7 @@ export function OutlineForm({
                                     onClick={() => handleAddSubsection(section.id)}
                                     disabled={isRunning}
                                 >
-                                    + Add subsection
+                                    + Add Subsection
                                 </button>
                             </div>
                         ))}
@@ -158,7 +158,7 @@ export function OutlineForm({
                         onClick={handleAddSection}
                         disabled={isRunning}
                     >
-                        + Add section
+                        + Add Section
                     </button>
                 )}
                 <button type="submit" className="outline-submit" disabled={!isFormValid || isRunning}>
