@@ -20,7 +20,7 @@ except ImportError as exception:  # pragma: no cover - dependency check
 
 from pydantic import ValidationError
 
-from backend.models import GenerateRequest, normalize_subject_list
+from backend.schemas import GenerateRequest, normalize_subject_list
 
 
 def parse_args() -> argparse.Namespace:

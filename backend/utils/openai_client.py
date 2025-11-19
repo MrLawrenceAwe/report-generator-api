@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from openai import AsyncOpenAI, OpenAI
 
-from backend.models import ModelSpec
+from backend.schemas import ModelSpec
 from backend.utils.model_utils import supports_reasoning
 
 

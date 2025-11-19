@@ -15,7 +15,7 @@ from backend.db import (
     create_session_factory,
     session_scope,
 )
-from backend.models import GenerateRequest, Outline, Section
+from backend.schemas import GenerateRequest, Outline, Section
 from backend.storage import GeneratedReportStore
 
 

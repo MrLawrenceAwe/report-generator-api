@@ -15,7 +15,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from app import app, get_report_service
-from backend.models import (
+from backend.schemas import (
     DEFAULT_TEXT_MODEL,
     GenerateRequest,
     Outline,

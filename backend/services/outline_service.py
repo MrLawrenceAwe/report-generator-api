@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from backend.utils.formatting import parse_outline_json
-from backend.models import (
+from backend.schemas import (
     DEFAULT_TEXT_MODEL,
     ModelSpec,
     Outline,

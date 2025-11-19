@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.models import GenerateRequest, OutlineRequest
+from backend.schemas import GenerateRequest, OutlineRequest
 from backend.services.outline_service import OutlineService
 
 

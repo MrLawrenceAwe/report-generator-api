@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.models import GenerateRequest
+from backend.schemas import GenerateRequest
 from backend.services.outline_service import OutlineService
 from backend.services.report_service import ReportGeneratorService
 from backend.storage import GeneratedReportStore

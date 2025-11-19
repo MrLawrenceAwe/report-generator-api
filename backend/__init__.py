@@ -1,5 +1,5 @@
 from .utils import formatting, openai_client, prompts, summary
-from .models import (
+from .schemas import (
     GenerateRequest,
     ModelSpec,
     Outline,

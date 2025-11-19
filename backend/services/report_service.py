@@ -9,7 +9,7 @@ from backend.utils.formatting import (
     ensure_subsection_numbering,
     enforce_subsection_headings,
 )
-from backend.models import (
+from backend.schemas import (
     DEFAULT_TEXT_MODEL,
     GenerateRequest,
     ModelSpec,

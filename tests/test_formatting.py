@@ -8,7 +8,7 @@ os.environ.setdefault("OPENAI_API_KEY", "test-key")
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from backend.utils.formatting import parse_outline_json
-from backend.models import Outline
+from backend.schemas import Outline
 
 
 def test_parse_outline_json_allows_trailing_text() -> None:

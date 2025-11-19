@@ -24,7 +24,7 @@ from backend.db import (
     create_session_factory,
     session_scope,
 )
-from backend.models import GenerateRequest, Outline
+from backend.schemas import GenerateRequest, Outline
 
 _DEFAULT_DB_URL = "sqlite:///reportgen.db"
 _DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"

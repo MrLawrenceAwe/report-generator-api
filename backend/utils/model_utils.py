@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from backend.models import ModelSpec
+from backend.schemas import ModelSpec
 
 _REASONING_MODEL_PREFIXES = ("gpt-5", "o3", "o4")
 
