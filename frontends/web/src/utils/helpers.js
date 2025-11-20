@@ -301,3 +301,15 @@ export function buildModelsPayload(stageModels) {
     });
     return payload;
 }
+
+export function downloadTextFile(text, filename = "report.md") {
+    const safeText = text || "";
+    if (!safeText) return;
+    const blob = new Blob([safeText], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+}

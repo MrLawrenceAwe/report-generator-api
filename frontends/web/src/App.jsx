@@ -9,6 +9,7 @@ import { Sidebar } from './components/Sidebar';
 import { ChatPane } from './components/ChatPane';
 import { TopicView } from './components/TopicView';
 import { OutlineForm } from './components/OutlineForm';
+import { ReportView } from './components/ReportView';
 import {
   loadApiBase,
   loadSavedList,
@@ -26,6 +27,7 @@ function App() {
   const [apiBase] = useState(loadApiBase);
   const [savedTopics, setSavedTopics] = useState(() => loadSavedList(SAVED_TOPICS_KEY));
   const [savedReports, setSavedReports] = useState(() => loadSavedList(SAVED_REPORTS_KEY));
+  const [activeReport, setActiveReport] = useState(null);
   const [composerValue, setComposerValue] = useState("");
   const [topicViewBarValue, setTopicViewBarValue] = useState("");
   const [mode, setMode] = useState("topic");
@@ -56,17 +58,22 @@ function App() {
     suggestionModel,
   });
 
-  const rememberReport = useCallback((topic, content) => {
-    const summary = summarizeReport(content);
+  const rememberReport = useCallback((topic, content, title) => {
+    const safeContent = content || "";
+    const normalizedTitle = (title || topic || "Explorer Report").trim() || "Explorer Report";
+    const normalizedTopic = (topic || normalizedTitle).trim();
+    const summary = summarizeReport(safeContent || normalizedTitle);
     setSavedReports((current) => [
       {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        topic,
+        topic: normalizedTopic,
+        title: normalizedTitle,
+        content: safeContent,
         preview: summary,
       },
       ...current,
     ].slice(0, MAX_SAVED_REPORTS));
-  }, []);
+  }, [setSavedReports]);
 
   const {
     messages,
@@ -104,6 +111,7 @@ function App() {
       const normalizedPrompt = (prompt || "").trim();
       if (!normalizedPrompt || isRunning) return false;
 
+      setActiveReport(null);
       const assistantId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       rememberTopic(normalizedPrompt);
       appendMessage({
@@ -112,7 +120,13 @@ function App() {
         content: normalizedPrompt,
         variant: "topic",
       });
-      appendMessage({ id: assistantId, role: "assistant", content: "", variant: "topic" });
+      appendMessage({
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        variant: "topic",
+        reportTopic: normalizedPrompt,
+      });
       setIsRunning(true);
       try {
         await runReportFlow(
@@ -131,7 +145,7 @@ function App() {
         setIsRunning(false);
       }
     },
-    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount, setIsRunning]
+    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount, setActiveReport, setIsRunning]
   );
 
   const {
@@ -187,6 +201,37 @@ function App() {
     runTopicPrompt,
   });
 
+  const handleReportOpen = useCallback(
+    (reportPayload) => {
+      if (!reportPayload) return;
+      const content = reportPayload.content || reportPayload.reportText || "";
+      const title =
+        (reportPayload.title || reportPayload.reportTitle || reportPayload.topic || "Explorer Report").trim() ||
+        "Explorer Report";
+      const topic =
+        (reportPayload.topic || reportPayload.reportTopic || title).trim() || "Explorer Report";
+      const preview = reportPayload.preview || summarizeReport(content || "") || topic;
+      setActiveReport({
+        id: reportPayload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title,
+        topic,
+        preview,
+        content,
+      });
+      closeTopicView();
+    },
+    [closeTopicView]
+  );
+
+  const handleReportClose = useCallback(() => {
+    setActiveReport(null);
+  }, []);
+
+  const handleOpenTopic = useCallback((topic) => {
+    setActiveReport(null);
+    openTopicView(topic);
+  }, [openTopicView]);
+
   const {
     outlineTopic,
     setOutlineTopic,
@@ -209,6 +254,8 @@ function App() {
     appendMessage,
     models: modelsPayload,
     onGenerate: async (payload, assistantId, topicText) => {
+      setActiveReport(null);
+      setIsRunning(true);
       const wasSuccessful = await runReportFlow(
         payload,
         assistantId,
@@ -237,17 +284,17 @@ function App() {
       event.preventDefault();
       const normalized = topicViewBarValue.trim();
       if (!normalized) return;
-      openTopicView(normalized);
+      handleOpenTopic(normalized);
       setTopicViewBarValue("");
     },
-    [openTopicView, topicViewBarValue]
+    [handleOpenTopic, topicViewBarValue]
   );
 
   const handleTopicRecall = useCallback(
     (topic) => {
-      openTopicView(topic);
+      handleOpenTopic(topic);
     },
-    [openTopicView]
+    [handleOpenTopic]
   );
 
   const composerButtonLabel = isRunning ? "Stop" : "Generate Report";
@@ -289,18 +336,19 @@ function App() {
 
   const hasMessages = messages.length > 0;
   const isTopicViewOpen = Boolean(topicViewTopic);
+  const isReportViewOpen = Boolean(activeReport);
   const isTopicSaved = useMemo(
     () => savedTopics.some((entry) => entry.prompt === topicViewTopic),
     [savedTopics, topicViewTopic]
   );
-  const shouldShowExplore = !isTopicViewOpen && !hasMessages;
+  const shouldShowExplore = !isTopicViewOpen && !isReportViewOpen && !hasMessages;
   const presetLabel = MODEL_PRESET_LABELS[selectedPreset] || selectedPreset;
 
   const chatPaneClasses = ["chat-pane"];
-  if (!hasMessages && !isTopicViewOpen) {
+  if (!hasMessages && !isTopicViewOpen && !isReportViewOpen) {
     chatPaneClasses.push("chat-pane--empty");
   }
-  if (isTopicViewOpen) {
+  if (isTopicViewOpen || isReportViewOpen) {
     chatPaneClasses.push("chat-pane--topic-view");
   }
   const chatPaneClassName = chatPaneClasses.join(" ");
@@ -337,6 +385,7 @@ function App() {
         setTopicViewBarValue={setTopicViewBarValue}
         handleTopicViewBarSubmit={handleTopicViewBarSubmit}
         onOpenSettings={handleOpenSettings}
+        onReportSelect={handleReportOpen}
       />
       <main className={chatPaneClassName}>
         {shouldShowExplore && (
@@ -396,7 +445,7 @@ function App() {
                       if (exploreSelectMode) {
                         handleToggleExploreSuggestion(suggestion);
                       } else {
-                        openTopicView(suggestion);
+                        handleOpenTopic(suggestion);
                       }
                     }}
                     title={exploreSelectMode ? "Click to select" : "Click to open"}
@@ -438,7 +487,7 @@ function App() {
               handleSave: handleTopicViewSave,
               handleGenerate: handleTopicViewGenerate,
               handleClose: closeTopicView,
-              handleOpenTopic: openTopicView,
+              handleOpenTopic,
               handleToggleSuggestion: handleSuggestionToggle,
               handleSaveSelectedSuggestions,
               handleRefreshSuggestions,
@@ -447,6 +496,11 @@ function App() {
               setSectionCount,
             }}
             editorRef={topicViewEditorRef}
+          />
+        ) : isReportViewOpen ? (
+          <ReportView
+            report={activeReport}
+            onClose={handleReportClose}
           />
         ) : (
           <ChatPane
@@ -493,6 +547,7 @@ function App() {
             selectedPreset={selectedPreset}
             onPresetSelect={handlePresetSelect}
             hideComposer={isRunning}
+            onViewReport={handleReportOpen}
           />
         )}
       </main>

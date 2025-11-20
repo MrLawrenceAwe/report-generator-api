@@ -95,15 +95,25 @@
 
 .message__download {
     margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .message__download button {
-    border: none;
-    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
     padding: 8px 12px;
-    background: #e6e7ee;
-    color: #0a0a0a;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
     cursor: pointer;
+    transition: border 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.message__download button:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
 }
 
 @media (max-width: 640px) {
@@ -123,5 +133,11 @@
         background: #f8fafc;
         border-color: #e2e8f0;
         color: #1e293b;
+    }
+
+    .message__download button {
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+        color: #0f172a;
     }
 }

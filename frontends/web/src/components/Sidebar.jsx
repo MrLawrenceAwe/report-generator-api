@@ -9,6 +9,7 @@ export function Sidebar({
     setTopicViewBarValue,
     handleTopicViewBarSubmit,
     onOpenSettings,
+    onReportSelect,
 }) {
     return (
         <aside className="sidebar" aria-label="Saved prompts and generated reports">
@@ -71,11 +72,15 @@ export function Sidebar({
                     <ul className="sidebar-list">
                         {savedReports.map((report) => (
                             <li key={report.id}>
-                                <div className="sidebar-entry sidebar-entry--report">
+                                <button
+                                    type="button"
+                                    className="sidebar-entry sidebar-entry--report"
+                                    onClick={() => onReportSelect?.(report)}
+                                    aria-label={`Open report ${report.title || report.topic}`}
+                                >
                                     <span className="sidebar-entry__eyebrow">Report</span>
                                     <span className="sidebar-entry__title">{report.topic}</span>
-                                    <p className="sidebar-entry__preview">{report.preview}</p>
-                                </div>
+                                </button>
                             </li>
                         ))}
                     </ul>

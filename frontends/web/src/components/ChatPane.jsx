@@ -5,6 +5,7 @@ import {
     MODEL_PRESET_ORDER,
     MODEL_STAGES,
     MODEL_OPTIONS,
+    downloadTextFile,
 } from '../utils/helpers';
 import { SectionCountSelector } from './SectionCountSelector';
 
@@ -111,6 +112,7 @@ export function ChatPane({
     onPresetSelect,
     presetLabel,
     hideComposer = false,
+    onViewReport,
 }) {
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -124,15 +126,14 @@ export function ChatPane({
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    const handleDownload = (text, filename = "report.md") => {
-        if (!text) return;
-        const blob = new Blob([text], { type: "text/markdown" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 500);
+    const handleViewReport = (message) => {
+        if (!onViewReport || !message.reportText) return;
+        onViewReport({
+            id: message.id,
+            title: message.reportTitle,
+            topic: message.reportTopic,
+            content: message.reportText,
+        });
     };
 
     const hasMessages = messages.length > 0;
@@ -171,11 +172,19 @@ export function ChatPane({
                                             )}
                                             {message.reportText && (
                                                 <div className="message__download">
+                                                    {onViewReport && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleViewReport(message)}
+                                                        >
+                                                            View
+                                                        </button>
+                                                    )}
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDownload(message.reportText, `${message.reportTitle || "report"}.md`)}
+                                                        onClick={() => downloadTextFile(message.reportText, `${message.reportTitle || "report"}.md`)}
                                                     >
-                                                        Download report
+                                                        Download
                                                     </button>
                                                 </div>
                                             )}

@@ -133,14 +133,17 @@ export function useChat(apiBase, rememberReport) {
                     }
                 }
                 const resolvedText = finalText || "Explorer didn't return a report.";
+                const resolvedTitle = finalTitle || "Explorer Report";
+                const resolvedTopic = summaryLabel || resolvedTitle;
                 updateMessage(assistantId, (message) => ({
                     content: statusLog.length ? statusLog.join("\n") : (message.content || resolvedText),
                     reportText: finalText || null,
-                    reportTitle: finalTitle || "Explorer Report",
+                    reportTitle: resolvedTitle,
+                    reportTopic: message.reportTopic || resolvedTopic,
                     outline: finalOutline,
                 }));
                 if (finalText && summaryLabel) {
-                    rememberReport(summaryLabel, finalText);
+                    rememberReport(summaryLabel, finalText, resolvedTitle);
                 }
                 return true;
             } catch (error) {

@@ -209,7 +209,13 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
                 content: userSummary,
                 variant: "outline",
             });
-            appendMessage({ id: assistantId, role: "assistant", content: "", variant: "outline" });
+            appendMessage({
+                id: assistantId,
+                role: "assistant",
+                content: "",
+                variant: "outline",
+                reportTopic: topicText,
+            });
             setOutlineError("");
 
             if (onGenerate) {
