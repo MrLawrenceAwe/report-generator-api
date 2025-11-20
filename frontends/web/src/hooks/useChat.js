@@ -5,6 +5,31 @@ export function useChat(apiBase, rememberReport) {
     const [isRunning, setIsRunning] = useState(false);
     const abortRef = useRef(null);
 
+    const formatStatus = useCallback((event) => {
+        switch (event.status) {
+            case "started":
+                return "Starting…";
+            case "generating_outline":
+                return `Generating outline (${event.model || "model unknown"})…`;
+            case "outline_ready":
+                return `Outline ready (${event.sections} sections)`;
+            case "begin_sections":
+                return `Writing sections (${event.count} sections)…`;
+            case "writing_section":
+                return `Writing ${event.section}`;
+            case "translating_section":
+                return `Translating ${event.section}`;
+            case "section_complete":
+                return `Finished ${event.section}`;
+            case "writer_model_fallback":
+                return `Retrying ${event.section} with ${event.fallback_model}`;
+            case "complete":
+                return "Report ready";
+            default:
+                return "";
+        }
+    }, []);
+
     const updateMessage = useCallback((id, updater) => {
         setMessages((current) =>
             current.map((message) =>
@@ -24,6 +49,7 @@ export function useChat(apiBase, rememberReport) {
     const runReportFlow = useCallback(
         async (generateRequest, assistantId, summaryLabel) => {
             abortRef.current = new AbortController();
+            const statusLog = [];
             try {
                 const response = await fetch(`${apiBase}/generate_report`, {
                     method: "POST",
@@ -70,6 +96,8 @@ export function useChat(apiBase, rememberReport) {
                     .getReader();
                 let buffer = "";
                 let finalText = "";
+                let finalOutline = null;
+                let finalTitle = summaryLabel || "";
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
@@ -81,7 +109,20 @@ export function useChat(apiBase, rememberReport) {
                         if (!line) continue;
                         try {
                             const event = JSON.parse(line);
+                            const statusText = formatStatus(event);
+                            if (statusText) {
+                                statusLog.push(statusText);
+                                updateMessage(assistantId, {
+                                    content: statusLog.join("\n"),
+                                    outline: event.outline || finalOutline || null,
+                                });
+                            }
+                            if (event.outline) {
+                                finalOutline = event.outline;
+                            }
                             if (event.status === "complete") {
+                                finalOutline = event.outline_used || finalOutline || null;
+                                finalTitle = event.report_title || finalTitle;
                                 finalText = event.report || "";
                             } else if (event.status === "error") {
                                 throw new Error(event.detail || "Explorer reported an error.");
@@ -90,13 +131,13 @@ export function useChat(apiBase, rememberReport) {
                             console.error("Failed to parse event", error, line);
                         }
                     }
-                    if (finalText) {
-                        updateMessage(assistantId, { content: finalText });
-                    }
                 }
                 const resolvedText = finalText || "Explorer didn't return a report.";
                 updateMessage(assistantId, (message) => ({
-                    content: message.content || resolvedText,
+                    content: statusLog.length ? statusLog.join("\n") : (message.content || resolvedText),
+                    reportText: finalText || null,
+                    reportTitle: finalTitle || "Explorer Report",
+                    outline: finalOutline,
                 }));
                 if (finalText && summaryLabel) {
                     rememberReport(summaryLabel, finalText);

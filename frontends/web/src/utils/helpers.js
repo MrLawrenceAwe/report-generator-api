@@ -35,11 +35,6 @@ export const MODEL_STAGES = [
         label: "Translator",
         description: "Turns prose into narration suitable for audio format.",
     },
-    {
-        key: "cleanup",
-        label: "Cleanup",
-        description: "Polishes narration, and strips AI meta chatter.",
-    },
 ];
 
 export const MODEL_PRESET_ORDER = ["fast", "slower", "slowest"];
@@ -61,7 +56,6 @@ export const DEFAULT_STAGE_MODELS = {
     outline: "gpt-4o-mini",
     writer: "gpt-4o-mini",
     translator: "gpt-4o-mini",
-    cleanup: "gpt-5-nano",
 };
 
 export const DEFAULT_MODEL_PRESETS = {
@@ -79,7 +73,6 @@ export const DEFAULT_MODEL_PRESETS = {
         outline: "gpt-4o",
         writer: "gpt-4o",
         translator: "gpt-4o",
-        cleanup: "gpt-4o",
     },
 };
 
@@ -99,7 +92,7 @@ export const DEFAULT_OUTLINE_JSON = JSON.stringify(
 export function buildOutlineGeneratePayload(topic, sections, models) {
     const payload = {
         mode: "generate_report",
-        return: "report",
+        return: "report_with_outline",
         outline: {
             report_title: topic,
             sections: sections.map((section) => ({
@@ -142,7 +135,19 @@ export function loadApiBase() {
     if (paramBase && paramBase.trim()) {
         localStorage.setItem(STORAGE_KEY, paramBase.trim());
     }
-    return localStorage.getItem(STORAGE_KEY) || DEFAULT_API_BASE;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return stored;
+
+    const envBase = typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_BASE : undefined;
+    if (envBase && envBase.trim()) {
+        return envBase.trim();
+    }
+
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
+        return "http://localhost:8000";
+    }
+
+    return DEFAULT_API_BASE;
 }
 
 export function loadSavedList(key) {
@@ -279,7 +284,9 @@ export async function fetchTopicSuggestions(apiBase, {
             })
             .filter(Boolean);
     } catch (error) {
-        console.warn("Falling back to local suggestions", error);
+        if (!(error && error.name === "AbortError")) {
+            console.warn("Falling back to local suggestions", error);
+        }
         return [];
     }
 }

@@ -119,7 +119,7 @@ function App() {
           {
             topic: normalizedPrompt,
             mode: "generate_report",
-            return: "report",
+            return: "report_with_outline",
             sections: sectionCount,
             models: modelsPayload,
           },
@@ -293,6 +293,7 @@ function App() {
     () => savedTopics.some((entry) => entry.prompt === topicViewTopic),
     [savedTopics, topicViewTopic]
   );
+  const shouldShowExplore = !isTopicViewOpen && !hasMessages;
   const presetLabel = MODEL_PRESET_LABELS[selectedPreset] || selectedPreset;
 
   const chatPaneClasses = ["chat-pane"];
@@ -338,7 +339,7 @@ function App() {
         onOpenSettings={handleOpenSettings}
       />
       <main className={chatPaneClassName}>
-        {!isTopicViewOpen && (
+        {shouldShowExplore && (
           <section className="explore" aria-label="Explore suggestions">
             <div className="explore__header">
               <div>
@@ -491,6 +492,7 @@ function App() {
             onStageModelChange={handleStageModelChange}
             selectedPreset={selectedPreset}
             onPresetSelect={handlePresetSelect}
+            hideComposer={isRunning}
           />
         )}
       </main>

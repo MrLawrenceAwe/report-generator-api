@@ -76,6 +76,36 @@
     border-color: rgba(255, 255, 255, 0.2);
 }
 
+.composer--stop {
+    justify-content: center;
+}
+
+.composer-stop-only {
+    display: flex;
+    justify-content: center;
+    padding: 18px 0;
+}
+
+.composer-stop-only__button {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: #e6e7ee;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.composer-stop-only__button span {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: #0a0a0a;
+    border-radius: 4px;
+}
+
 .mode-toggle {
     display: inline-flex;
     padding: 3px;

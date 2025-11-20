@@ -110,6 +110,7 @@ export function ChatPane({
     selectedPreset,
     onPresetSelect,
     presetLabel,
+    hideComposer = false,
 }) {
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -122,6 +123,17 @@ export function ChatPane({
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+    const handleDownload = (text, filename = "report.md") => {
+        if (!text) return;
+        const blob = new Blob([text], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 500);
+    };
 
     const hasMessages = messages.length > 0;
 
@@ -136,7 +148,38 @@ export function ChatPane({
                                     {message.variant === "outline" ? (
                                         <pre>{message.content}</pre>
                                     ) : (
-                                        <p>{message.content}</p>
+                                        <>
+                                            <p>{message.content}</p>
+                                            {message.outline && (
+                                                <div className="message__outline">
+                                                    <p className="message__outline-title">Outline</p>
+                                                    <ol>
+                                                        {message.outline.sections?.map((section) => (
+                                                            <li key={section.title}>
+                                                                <strong>{section.title}</strong>
+                                                                {!!section.subsections?.length && (
+                                                                    <ul>
+                                                                        {section.subsections.map((sub) => (
+                                                                            <li key={`${section.title}-${sub}`}>{sub}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </li>
+                                                        ))}
+                                                    </ol>
+                                                </div>
+                                            )}
+                                            {message.reportText && (
+                                                <div className="message__download">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDownload(message.reportText, `${message.reportTitle || "report"}.md`)}
+                                                    >
+                                                        Download report
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </li>
@@ -145,7 +188,18 @@ export function ChatPane({
                     <div ref={chatEndRef} />
                 </section>
             )}
-            {mode === "topic" ? (
+            {hideComposer ? (
+                <div className="composer-stop-only">
+                    <button
+                        type="button"
+                        className="composer-stop-only__button"
+                        onClick={handleStop}
+                        aria-label="Stop generation"
+                    >
+                        <span aria-hidden="true" />
+                    </button>
+                </div>
+            ) : mode === "topic" ? (
                 <div className="composer-lane">
                     <div className="composer-toolbar">
                         {renderModeToggle("mode-toggle--compact")}

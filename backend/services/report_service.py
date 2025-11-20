@@ -22,7 +22,6 @@ from .outline_service import OutlineParsingError, OutlineService
 from backend.utils.prompts import (
     build_section_translator_prompt,
     build_section_writer_prompt,
-    build_translation_cleanup_prompt,
 )
 from .report_state import NumberedSection, WrittenSection, WriterState
 from backend.storage import GeneratedReportStore, StoredReportHandle
@@ -94,13 +93,6 @@ class _ReportStreamRunner:
         self.outline_spec = models.get("outline", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.writer_spec = models.get("writer", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.translator_spec = models.get("translator", ModelSpec(model=DEFAULT_TEXT_MODEL))
-        cleanup_spec = models.get("cleanup")
-        if cleanup_spec is not None:
-            self.cleanup_spec = cleanup_spec
-            self.cleanup_required = True
-        else:
-            self.cleanup_spec = self.translator_spec
-            self.cleanup_required = False
         self.writer_state = WriterState.build(
             self.writer_spec,
             (
@@ -126,11 +118,10 @@ class _ReportStreamRunner:
             if outline is None:
                 return
 
-            storage_error = self._prepare_storage(outline)
-            if storage_error:
-                async with self.service._emit_status(storage_error) as status:
+            storage_status = self._prepare_storage(outline)
+            if storage_status:
+                async with self.service._emit_status(storage_status) as status:
                     yield status
-                return
 
             numbered_sections = self.service._build_numbered_sections(outline)
             all_section_headers = [entry.title for entry in numbered_sections]
@@ -201,6 +192,7 @@ class _ReportStreamRunner:
                 "status": "outline_ready",
                 "model": self.outline_spec.model,
                 "sections": len(outline.sections),
+                "outline": outline.model_dump(),
             }
             maybe_add_reasoning(
                 outline_ready_status, "reasoning_effort", self.outline_spec
@@ -214,6 +206,7 @@ class _ReportStreamRunner:
             {
                 "status": "using_provided_outline",
                 "sections": len(provided_outline.sections),
+                "outline": provided_outline.model_dump(),
             }
         ) as status:
             yield status
@@ -307,7 +300,6 @@ class _ReportStreamRunner:
                 outline.report_title,
                 section_title,
                 section_text,
-                inline_cleanup=not self.cleanup_required,
             )
         except BaseException as exception:
             if isinstance(exception, asyncio.CancelledError) or not isinstance(
@@ -320,31 +312,8 @@ class _ReportStreamRunner:
                 yield status
             return
 
-        cleaned_narration = narrated
-        if self.cleanup_required:
-            async for status in self._emit_status_payload(
-                {"status": "cleaning_section", "section": section_title}
-            ):
-                yield status
-            try:
-                cleaned_narration = await self._cleanup_section(
-                    outline.report_title,
-                    section_title,
-                    narrated,
-                )
-            except BaseException as exception:
-                if isinstance(exception, asyncio.CancelledError) or not isinstance(
-                    exception, Exception
-                ):
-                    raise
-                async for status in self._emit_stage_error(
-                    section_title, "clean", exception
-                ):
-                    yield status
-                return
-
         cleaned_narration = self._finalize_section_body(
-            cleaned_narration, subsection_titles
+            narrated, subsection_titles
         )
         written_section = WrittenSection(
             title=section_title,
@@ -384,11 +353,6 @@ class _ReportStreamRunner:
         maybe_add_reasoning(
             begin_status, "translator_reasoning_effort", self.translator_spec
         )
-        if self.cleanup_required:
-            begin_status["cleanup_model"] = self.cleanup_spec.model
-            maybe_add_reasoning(
-                begin_status, "cleanup_reasoning_effort", self.cleanup_spec
-            )
         return begin_status
 
     def _prepare_storage(self, outline: Outline) -> Optional[Dict[str, Any]]:
@@ -399,11 +363,12 @@ class _ReportStreamRunner:
                 self.request, outline
             )
         except Exception as exception:
+            self._storage_handle = None
             return {
-                "status": "error",
-                "detail": f"Failed to persist outline artifacts: {exception}",
+                "status": "warning",
+                "detail": f"Persistence disabled for this run: {exception}",
             }
-        return None
+        return {"status": "persistence_ready"}
 
     def _finalize_report_persistence(
         self, assembled_narration: str
@@ -496,32 +461,15 @@ class _ReportStreamRunner:
         report_title: str,
         section_title: str,
         section_text: str,
-        inline_cleanup: bool,
     ) -> str:
         translator_system = "You translate prose into clear, audio-friendly narration without losing information."
         translator_prompt = build_section_translator_prompt(
             report_title,
             section_title,
             section_text,
-            strip_meta=inline_cleanup,
         )
         return await self.service.text_client.call_text_async(
             self.translator_spec,
             translator_system,
             translator_prompt,
-        )
-
-    async def _cleanup_section(
-        self, report_title: str, section_title: str, narrated: str
-    ) -> str:
-        cleanup_system = "You remove meta commentary from narrated report sections while keeping content intact."
-        cleanup_prompt = build_translation_cleanup_prompt(
-            report_title,
-            section_title,
-            narrated,
-        )
-        return await self.service.text_client.call_text_async(
-            self.cleanup_spec,
-            cleanup_system,
-            cleanup_prompt,
         )

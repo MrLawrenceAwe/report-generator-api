@@ -74,6 +74,38 @@
     white-space: pre-wrap;
 }
 
+.message__outline {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+}
+
+.message__outline-title {
+    margin: 0 0 6px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.message__outline ol,
+.message__outline ul {
+    margin: 0 0 0 16px;
+    padding: 0;
+}
+
+.message__download {
+    margin-top: 12px;
+}
+
+.message__download button {
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
+    background: #e6e7ee;
+    color: #0a0a0a;
+    cursor: pointer;
+}
+
 @media (max-width: 640px) {
     .chat-pane {
         padding: 28px 16px;
