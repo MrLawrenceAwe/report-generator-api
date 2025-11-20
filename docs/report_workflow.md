@@ -57,11 +57,13 @@ Many events (all except `complete` and the error case) are followed by a zero-le
 - `translator` — Narration model, defaults to the writer when unspecified.
 - `cleanup` — Optional cleanup model. When omitted the translator handles cleanup inline, and `cleanup_required` becomes `False`.
 
+Explorer’s UI surfaces `gpt-4o-mini`, `gpt-4.1-nano`, `gpt-4o`, and `gpt-5-nano` as ready-to-use options for suggestions and per-stage overrides, but any valid model string accepted by your OpenAI endpoint is allowed.
+
 Each value is a `ModelSpec`:
 
 ```json
 {
-  "model": "gpt-4o-mini",
+  "model": "gpt-4.1-nano",
   "reasoning_effort": "medium"
 }
 ```

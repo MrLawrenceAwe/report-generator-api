@@ -47,6 +47,7 @@ export const MODEL_PRESET_LABELS = {
 
 export const MODEL_OPTIONS = [
     { value: "gpt-4o-mini", label: "gpt-4o-mini (fast)" },
+    { value: "gpt-4.1-nano", label: "gpt-4.1-nano" },
     { value: "gpt-4o", label: "gpt-4o (slower, better)" },
     { value: "gpt-5-nano", label: "gpt-5-nano" },
 ];

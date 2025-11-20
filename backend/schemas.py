@@ -10,7 +10,10 @@ DEFAULT_TEXT_MODEL = "gpt-4o-mini"
 
 
 class ModelSpec(BaseModel):
-    model: str = Field(default=DEFAULT_TEXT_MODEL, description="Model name, e.g., gpt-4o-mini, gpt-4o")
+    model: str = Field(
+        default=DEFAULT_TEXT_MODEL,
+        description="Model name, e.g., gpt-4.1-nano, gpt-4o-mini, gpt-4o",
+    )
     reasoning_effort: Optional[ReasoningEffort] = Field(default=None, description="Reasoning effort for reasoning models")
 
 
