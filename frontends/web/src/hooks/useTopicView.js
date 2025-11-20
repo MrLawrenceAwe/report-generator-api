@@ -21,12 +21,7 @@ export function useTopicView({
     const topicViewEditorRef = useRef(null);
     const skipTopicCommitRef = useRef(false);
 
-    useEffect(() => {
-        setTopicViewDraft(topicViewTopic);
-        setIsTopicEditing(false);
-        setSelectedSuggestions([]);
-        setTopicSelectMode(false);
-    }, [topicViewTopic]);
+
 
     useEffect(() => {
         if (isTopicEditing) {
@@ -36,15 +31,8 @@ export function useTopicView({
     }, [isTopicEditing]);
 
     useEffect(() => {
-        if (!topicViewTopic) {
-            setTopicSuggestions([]);
-            setSelectedSuggestions([]);
-            setTopicSelectMode(false);
-            return undefined;
-        }
+        if (!topicViewTopic) return;
         const controller = new AbortController();
-        setTopicSuggestionsLoading(true);
-        setSelectedSuggestions([]);
         const loadSuggestions = async () => {
             const remote = await fetchTopicSuggestions(apiBase, {
                 topic: topicViewTopic,
@@ -67,10 +55,20 @@ export function useTopicView({
         const normalized = (topic || "").trim();
         if (!normalized) return;
         setTopicViewTopic(normalized);
+        setTopicViewDraft(normalized);
+        setIsTopicEditing(false);
+        setTopicSuggestionsLoading(true);
+        setSelectedSuggestions([]);
+        setTopicSelectMode(false);
     }, []);
 
     const closeTopicView = useCallback(() => {
         setTopicViewTopic("");
+        setTopicViewDraft("");
+        setIsTopicEditing(false);
+        setTopicSuggestions([]);
+        setSelectedSuggestions([]);
+        setTopicSelectMode(false);
     }, []);
 
     const startTopicEditing = useCallback(() => {
@@ -95,6 +93,10 @@ export function useTopicView({
         setIsTopicEditing(false);
         if (normalized && normalized !== topicViewTopic) {
             setTopicViewTopic(normalized);
+            setTopicViewDraft(normalized);
+            setTopicSuggestionsLoading(true);
+            setSelectedSuggestions([]);
+            setTopicSelectMode(false);
         } else {
             setTopicViewDraft(topicViewTopic);
         }

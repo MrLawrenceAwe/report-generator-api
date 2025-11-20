@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
     loadModelPresets,
     loadActiveModelPreset,
@@ -36,22 +36,30 @@ export function useSettings() {
     }, []);
 
     const handlePresetModelChange = useCallback((presetKey, stageKey, value) => {
-        setModelPresets((current) =>
-            normalizeModelPresets({
-                ...current,
-                [presetKey]: { ...(current[presetKey] || {}), [stageKey]: value },
-            })
-        );
-    }, []);
+        const newPresets = normalizeModelPresets({
+            ...modelPresets,
+            [presetKey]: { ...(modelPresets[presetKey] || {}), [stageKey]: value },
+        });
+        setModelPresets(newPresets);
+        if (presetKey === selectedPreset) {
+            setStageModels({ ...newPresets[presetKey] });
+        }
+    }, [modelPresets, selectedPreset]);
 
     const handlePresetSelect = useCallback((presetKey) => {
         setSelectedPreset(presetKey);
-    }, []);
+        const normalized = normalizeModelPresets(modelPresets);
+        const selected = normalized[presetKey] || normalized[defaultPreset] || normalized.fast;
+        setStageModels({ ...selected });
+    }, [defaultPreset, modelPresets]);
 
     const handleDefaultPresetChange = useCallback((presetKey) => {
         setDefaultPreset(presetKey);
         setSelectedPreset(presetKey);
-    }, []);
+        const normalized = normalizeModelPresets(modelPresets);
+        const selected = normalized[presetKey] || normalized.fast;
+        setStageModels({ ...selected });
+    }, [modelPresets]);
 
     const handleOpenSettings = useCallback(() => setIsSettingsOpen(true), []);
     const handleCloseSettings = useCallback(() => setIsSettingsOpen(false), []);
@@ -60,11 +68,7 @@ export function useSettings() {
         setSuggestionModel(model);
     }, []);
 
-    useEffect(() => {
-        const normalized = normalizeModelPresets(modelPresets);
-        const selected = normalized[selectedPreset] || normalized[defaultPreset] || normalized.fast;
-        setStageModels({ ...selected });
-    }, [defaultPreset, modelPresets, selectedPreset]);
+
 
     return {
         modelPresets,

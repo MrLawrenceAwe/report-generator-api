@@ -162,7 +162,7 @@ export function useChat(apiBase, rememberReport) {
                 abortRef.current = null;
             }
         },
-        [apiBase, rememberReport, updateMessage]
+        [apiBase, rememberReport, updateMessage, formatStatus]
     );
 
     const stopGeneration = useCallback(() => {
