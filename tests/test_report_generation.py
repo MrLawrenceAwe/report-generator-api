@@ -91,7 +91,6 @@ def test_report_generator_stream_produces_complete_report():
         [
             "### Overview\nWriter body",
             "### Overview\nTranslated body",
-            "### Overview\nClean body",
         ]
     )
     service = ReportGeneratorService(
@@ -123,21 +122,21 @@ def test_report_generator_stream_produces_complete_report():
     assert [event["status"] for event in events] == [
         "started",
         "using_provided_outline",
+        "persistence_ready",
         "begin_sections",
         "writing_section",
         "translating_section",
-        "cleaning_section",
         "section_complete",
         "complete",
     ]
 
     final_event = events[-1]
     assert final_event["report_title"] == "Insights"
-    assert final_event["report"] == "Insights\n\n1: Background\n\n1.1: Overview\nClean body"
+    assert final_event["report"] == "Insights\n\n1: Background\n\n1.1: Overview\nTranslated body"
     assert final_event["outline_used"] == outline.model_dump()
 
     call_models = [model for model, *_ in stub_text_client.calls]
-    assert call_models == ["writer-model", "translator-model", "cleanup-model"]
+    assert call_models == ["writer-model", "translator-model"]
 
 
 def test_report_generator_translation_failure_emits_error_event():
@@ -180,6 +179,7 @@ def test_report_generator_translation_failure_emits_error_event():
     assert statuses == [
         "started",
         "using_provided_outline",
+        "persistence_ready",
         "begin_sections",
         "writing_section",
         "translating_section",
@@ -192,7 +192,7 @@ def test_report_generator_translation_failure_emits_error_event():
     assert len(stub_text_client.calls) == 2
 
 
-def test_report_generator_cleanup_failure_emits_error_event():
+def test_report_generator_ignores_unused_cleanup_responses():
     outline = Outline(
         report_title="Insights",
         sections=[Section(title="Background", subsections=["Overview"])],
@@ -233,20 +233,20 @@ def test_report_generator_cleanup_failure_emits_error_event():
     assert statuses == [
         "started",
         "using_provided_outline",
+        "persistence_ready",
         "begin_sections",
         "writing_section",
         "translating_section",
-        "cleaning_section",
-        "error",
+        "section_complete",
+        "complete",
     ]
+    assert len(stub_text_client.calls) == 2
+    assert stub_text_client._responses and isinstance(
+        stub_text_client._responses[0], RuntimeError
+    )
 
-    final_event = events[-1]
-    assert "cleanup boom" in final_event["detail"]
-    assert final_event["section"] == "1: Background"
-    assert len(stub_text_client.calls) == 3
 
-
-def test_report_generator_runs_cleanup_even_when_models_match():
+def test_report_generator_runs_translation_even_when_models_match():
     outline = Outline(
         report_title="Insights",
         sections=[Section(title="Background", subsections=["Overview"])],
@@ -284,16 +284,16 @@ def test_report_generator_runs_cleanup_even_when_models_match():
     asyncio.run(collect_events())
 
     statuses = [event["status"] for event in events]
-    assert "cleaning_section" in statuses
+    assert "translating_section" in statuses
     assert statuses[-1] == "complete"
-    assert len(stub_text_client.calls) == 3
+    assert len(stub_text_client.calls) == 2
 
 
 def test_report_generator_processes_multiple_sections_with_minimal_outline():
     max_sections = 4
     sections = []
     responses = []
-    expected_clean_sections = []
+    expected_translated_sections = []
     for index in range(max_sections):
         section_number = index + 1
         subsection_title = f"{section_number}.1: Detail {section_number}"
@@ -302,10 +302,9 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
             [
                 f"{subsection_title}\nWriter body {section_number}",
                 f"{subsection_title}\nTranslated body {section_number}",
-                f"{subsection_title}\nClean body {section_number}",
             ]
         )
-        expected_clean_sections.append(f"Clean body {section_number}")
+        expected_translated_sections.append(f"Translated body {section_number}")
 
     outline = Outline(report_title="Limited", sections=sections)
     stub_text_client = StubTextClient(responses)
@@ -342,10 +341,10 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
 
     final_event = events[-1]
     assert final_event["outline_used"] == outline.model_dump()
-    for clean_body in expected_clean_sections:
-        assert clean_body in final_event["report"]
+    for translated_body in expected_translated_sections:
+        assert translated_body in final_event["report"]
 
-    assert len(stub_text_client.calls) == max_sections * 3
+    assert len(stub_text_client.calls) == max_sections * 2
 
 
 def test_generate_report_endpoint_streams_events():
