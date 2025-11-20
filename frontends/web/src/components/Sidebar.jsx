@@ -8,6 +8,7 @@ export function Sidebar({
     topicViewBarValue,
     setTopicViewBarValue,
     handleTopicViewBarSubmit,
+    onOpenSettings,
 }) {
     return (
         <aside className="sidebar" aria-label="Saved prompts and generated reports">
@@ -17,6 +18,9 @@ export function Sidebar({
                     <div className="sidebar__title">Explorer</div>
                 </div>
             </div>
+            <button type="button" className="sidebar__settings-button" onClick={onOpenSettings}>
+                Settings
+            </button>
             <section className="sidebar-section sidebar-section--topic-bar">
                 <div className="sidebar-section__header">
                     <h2>Topic View bar</h2>

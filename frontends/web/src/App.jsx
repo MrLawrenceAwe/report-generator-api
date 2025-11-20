@@ -16,12 +16,31 @@ import {
   MAX_SAVED_REPORTS,
   MODE_TABS,
   summarizeReport,
+  loadModelPresets,
+  loadActiveModelPreset,
+  persistModelPresets,
+  persistActiveModelPreset,
+  buildModelsPayload,
+  normalizeModelPresets,
 } from './utils/helpers';
+import { ModelSettings } from './components/ModelSettings';
 
 function App() {
   const [apiBase] = useState(loadApiBase);
   const [savedTopics, setSavedTopics] = useState(() => loadSavedList(SAVED_TOPICS_KEY));
   const [savedReports, setSavedReports] = useState(() => loadSavedList(SAVED_REPORTS_KEY));
+  const [modelPresets, setModelPresets] = useState(loadModelPresets);
+  const [defaultPreset, setDefaultPreset] = useState(() =>
+    loadActiveModelPreset(loadModelPresets())
+  );
+  const [selectedPreset, setSelectedPreset] = useState(() =>
+    loadActiveModelPreset(loadModelPresets())
+  );
+  const [stageModels, setStageModels] = useState(() => {
+    const presets = loadModelPresets();
+    const presetKey = loadActiveModelPreset(presets);
+    return { ...presets[presetKey] };
+  });
 
   const rememberReport = useCallback((topic, content) => {
     const summary = summarizeReport(content);
@@ -51,6 +70,39 @@ function App() {
   const [isTopicEditing, setIsTopicEditing] = useState(false);
   const [mode, setMode] = useState("topic");
   const [sectionCount, setSectionCount] = useState(3);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const modelsPayload = useMemo(
+    () => buildModelsPayload(stageModels),
+    [stageModels]
+  );
+
+  const handleStageModelChange = useCallback((stageKey, value) => {
+    setStageModels((current) => ({
+      ...current,
+      [stageKey]: value,
+    }));
+  }, []);
+
+  const handlePresetModelChange = useCallback((presetKey, stageKey, value) => {
+    setModelPresets((current) =>
+      normalizeModelPresets({
+        ...current,
+        [presetKey]: { ...(current[presetKey] || {}), [stageKey]: value },
+      })
+    );
+  }, []);
+
+  const handlePresetSelect = useCallback((presetKey) => {
+    setSelectedPreset(presetKey);
+  }, []);
+
+  const handleDefaultPresetChange = useCallback((presetKey) => {
+    setDefaultPreset(presetKey);
+    setSelectedPreset(presetKey);
+  }, []);
+
+  const handleOpenSettings = useCallback(() => setIsSettingsOpen(true), []);
+  const handleCloseSettings = useCallback(() => setIsSettingsOpen(false), []);
 
 
   const {
@@ -73,6 +125,7 @@ function App() {
   } = useOutlineForm({
     isRunning,
     appendMessage,
+    models: modelsPayload,
     onGenerate: async (payload, assistantId, topicText) => {
       const wasSuccessful = await runReportFlow(
         payload,
@@ -97,6 +150,19 @@ function App() {
     persistList(SAVED_REPORTS_KEY, savedReports);
   }, [savedReports]);
 
+  useEffect(() => {
+    persistModelPresets(modelPresets);
+  }, [modelPresets]);
+
+  useEffect(() => {
+    persistActiveModelPreset(defaultPreset);
+  }, [defaultPreset]);
+
+  useEffect(() => {
+    const normalized = normalizeModelPresets(modelPresets);
+    const selected = normalized[selectedPreset] || normalized[defaultPreset] || normalized.fast;
+    setStageModels({ ...selected });
+  }, [defaultPreset, modelPresets, selectedPreset]);
 
 
   useEffect(() => {
@@ -234,7 +300,8 @@ function App() {
             topic: normalizedPrompt,
             mode: "generate_report",
             return: "report",
-            sections: sectionCount
+            sections: sectionCount,
+            models: modelsPayload,
           },
           assistantId,
           normalizedPrompt
@@ -244,7 +311,7 @@ function App() {
         setIsRunning(false);
       }
     },
-    [appendMessage, isRunning, rememberTopic, runReportFlow, sectionCount]
+    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount]
   );
 
   const handleTopicSubmit = useCallback(
@@ -359,6 +426,7 @@ function App() {
         topicViewBarValue={topicViewBarValue}
         setTopicViewBarValue={setTopicViewBarValue}
         handleTopicViewBarSubmit={handleTopicViewBarSubmit}
+        onOpenSettings={handleOpenSettings}
       />
       <main className={chatPaneClassName}>
         {isTopicViewOpen ? (
@@ -426,9 +494,39 @@ function App() {
                 }}
               />
             }
+            stageModels={stageModels}
+            onStageModelChange={handleStageModelChange}
+            selectedPreset={selectedPreset}
+            onPresetSelect={handlePresetSelect}
           />
         )}
       </main>
+      {isSettingsOpen && (
+        <div
+          className="settings-overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={handleCloseSettings}
+        >
+          <div className="settings-panel" onClick={(event) => event.stopPropagation()}>
+            <header className="settings-panel__header">
+              <div>
+                <p className="settings-panel__eyebrow">Explorer</p>
+                <h1 className="settings-panel__title">Settings</h1>
+              </div>
+              <button type="button" className="settings-panel__close" onClick={handleCloseSettings}>
+                Close
+              </button>
+            </header>
+            <ModelSettings
+              defaultPreset={defaultPreset}
+              onDefaultPresetChange={handleDefaultPresetChange}
+              presets={modelPresets}
+              onPresetModelChange={handlePresetModelChange}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

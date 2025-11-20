@@ -5,6 +5,8 @@ export const DEFAULT_API_BASE = window.location.origin;
 export const MAX_SAVED_TOPICS = 8;
 export const MAX_SAVED_REPORTS = 6;
 export const TOPIC_VIEW_BAR_INPUT_ID = "sidebar-topic-view-bar";
+export const MODEL_PRESET_STORAGE_KEY = "explorer-model-presets";
+export const MODEL_ACTIVE_PRESET_STORAGE_KEY = "explorer-active-model-preset";
 
 export const MODE_TABS = [
     { value: "topic", label: "From Topic" },
@@ -15,6 +17,69 @@ export const OUTLINE_INPUT_MODES = [
     { value: "lines", label: "Manual" },
     { value: "json", label: "JSON" },
 ];
+
+export const MODEL_STAGES = [
+    {
+        key: "outline",
+        label: "Outline",
+        description: "Plans the section list.",
+    },
+    {
+        key: "writer",
+        label: "Writer",
+        description: "Writes each section.",
+    },
+    {
+        key: "translator",
+        label: "Translator",
+        description: "Turns prose into narration suitable for audio format.",
+    },
+    {
+        key: "cleanup",
+        label: "Cleanup",
+        description: "Polishes narration, and strips AI meta chatter.",
+    },
+];
+
+export const MODEL_PRESET_ORDER = ["fast", "slower", "slowest"];
+
+export const MODEL_PRESET_LABELS = {
+    fast: "Fast",
+    slower: "Slower",
+    slowest: "Slowest",
+};
+
+export const MODEL_OPTIONS = [
+    { value: "gpt-4o-mini", label: "gpt-4o-mini (fast)" },
+    { value: "gpt-4o", label: "gpt-4o (slower, better)" },
+    { value: "gpt-5-nano", label: "gpt-5-nano" },
+];
+
+export const DEFAULT_STAGE_MODELS = {
+    outline: "gpt-4o-mini",
+    writer: "gpt-4o-mini",
+    translator: "gpt-4o-mini",
+    cleanup: "gpt-5-nano",
+};
+
+export const DEFAULT_MODEL_PRESETS = {
+    fast: {
+        ...DEFAULT_STAGE_MODELS,
+    },
+    slower: {
+        ...DEFAULT_STAGE_MODELS,
+        outline: "gpt-4o",
+        writer: "gpt-4o",
+        translator: "gpt-4o",
+    },
+    slowest: {
+        ...DEFAULT_STAGE_MODELS,
+        outline: "gpt-4o",
+        writer: "gpt-4o",
+        translator: "gpt-4o",
+        cleanup: "gpt-4o",
+    },
+};
 
 export const DEFAULT_OUTLINE_JSON = JSON.stringify(
     {
@@ -29,8 +94,8 @@ export const DEFAULT_OUTLINE_JSON = JSON.stringify(
     2
 );
 
-export function buildOutlineGeneratePayload(topic, sections) {
-    return {
+export function buildOutlineGeneratePayload(topic, sections, models) {
+    const payload = {
         mode: "generate_report",
         return: "report",
         outline: {
@@ -41,6 +106,10 @@ export function buildOutlineGeneratePayload(topic, sections) {
             })),
         },
     };
+    if (models) {
+        payload.models = models;
+    }
+    return payload;
 }
 
 export function createEmptyOutlineSection() {
@@ -105,4 +174,67 @@ export function autoResize(textarea) {
     if (!textarea) return;
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+export function normalizePreset(preset) {
+    const safePreset = preset && typeof preset === "object" ? preset : {};
+    const normalized = { ...DEFAULT_STAGE_MODELS };
+    MODEL_STAGES.forEach((stage) => {
+        const value = (safePreset[stage.key] || "").trim();
+        normalized[stage.key] = value || DEFAULT_STAGE_MODELS[stage.key];
+    });
+    return normalized;
+}
+
+export function normalizeModelPresets(rawPresets) {
+    const safePresets =
+        rawPresets && typeof rawPresets === "object" ? rawPresets : {};
+    const normalized = {};
+    MODEL_PRESET_ORDER.forEach((presetKey) => {
+        normalized[presetKey] = normalizePreset(safePresets[presetKey]);
+    });
+    return normalized;
+}
+
+export function loadModelPresets() {
+    try {
+        const raw = localStorage.getItem(MODEL_PRESET_STORAGE_KEY);
+        if (!raw) return DEFAULT_MODEL_PRESETS;
+        const parsed = JSON.parse(raw);
+        return normalizeModelPresets(parsed);
+    } catch (error) {
+        console.warn("Failed to parse model presets", error);
+        return DEFAULT_MODEL_PRESETS;
+    }
+}
+
+export function persistModelPresets(presets) {
+    localStorage.setItem(
+        MODEL_PRESET_STORAGE_KEY,
+        JSON.stringify(normalizeModelPresets(presets))
+    );
+}
+
+export function loadActiveModelPreset(presets) {
+    const available = presets || DEFAULT_MODEL_PRESETS;
+    const stored = localStorage.getItem(MODEL_ACTIVE_PRESET_STORAGE_KEY);
+    if (stored && available[stored]) {
+        return stored;
+    }
+    if (available.fast) return "fast";
+    return Object.keys(available)[0] || "fast";
+}
+
+export function persistActiveModelPreset(preset) {
+    localStorage.setItem(MODEL_ACTIVE_PRESET_STORAGE_KEY, preset);
+}
+
+export function buildModelsPayload(stageModels) {
+    const normalized = normalizePreset(stageModels);
+    const payload = {};
+    MODEL_STAGES.forEach((stage) => {
+        const modelName = (normalized[stage.key] || "").trim();
+        payload[stage.key] = { model: modelName || DEFAULT_STAGE_MODELS[stage.key] };
+    });
+    return payload;
 }

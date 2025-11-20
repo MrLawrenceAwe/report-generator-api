@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
     createEmptyOutlineSection,
     DEFAULT_OUTLINE_JSON,
     buildOutlineGeneratePayload,
 } from '../utils/helpers';
 
-export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
+export function useOutlineForm({ isRunning, appendMessage, onGenerate, models }) {
     const [outlineTopic, setOutlineTopic] = useState("");
     const [outlineInputMode, setOutlineInputMode] = useState("lines");
     const [outlineSections, setOutlineSections] = useState(() => [
@@ -14,41 +14,40 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
     const [outlineJsonInput, setOutlineJsonInput] = useState(DEFAULT_OUTLINE_JSON);
     const [outlineError, setOutlineError] = useState("");
 
-    useEffect(() => {
-        setOutlineError("");
-    }, [outlineInputMode]);
-
-    useEffect(() => {
-        setOutlineError("");
-    }, [outlineJsonInput, outlineSections, outlineTopic]);
+    const clearOutlineError = useCallback(() => setOutlineError(""), []);
 
     const resetOutlineForm = useCallback(() => {
+        clearOutlineError();
         setOutlineTopic("");
         setOutlineSections([createEmptyOutlineSection()]);
         setOutlineJsonInput(DEFAULT_OUTLINE_JSON);
-    }, []);
+    }, [clearOutlineError]);
 
     const handleAddOutlineSection = useCallback(() => {
+        clearOutlineError();
         setOutlineSections((current) => [...current, createEmptyOutlineSection()]);
-    }, []);
+    }, [clearOutlineError]);
 
     const handleRemoveOutlineSection = useCallback((sectionId) => {
+        clearOutlineError();
         setOutlineSections((current) =>
             current.length === 1
                 ? current
                 : current.filter((section) => section.id !== sectionId)
         );
-    }, []);
+    }, [clearOutlineError]);
 
     const handleOutlineSectionTitleChange = useCallback((sectionId, value) => {
+        clearOutlineError();
         setOutlineSections((current) =>
             current.map((section) =>
                 section.id === sectionId ? { ...section, title: value } : section
             )
         );
-    }, []);
+    }, [clearOutlineError]);
 
     const handleOutlineSubsectionChange = useCallback((sectionId, index, value) => {
+        clearOutlineError();
         setOutlineSections((current) =>
             current.map((section) => {
                 if (section.id !== sectionId) return section;
@@ -57,9 +56,10 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
                 return { ...section, subsections: updated };
             })
         );
-    }, []);
+    }, [clearOutlineError]);
 
     const handleAddSubsectionLine = useCallback((sectionId) => {
+        clearOutlineError();
         setOutlineSections((current) =>
             current.map((section) =>
                 section.id === sectionId
@@ -67,9 +67,10 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
                     : section
             )
         );
-    }, []);
+    }, [clearOutlineError]);
 
     const handleRemoveSubsectionLine = useCallback((sectionId, index) => {
+        clearOutlineError();
         setOutlineSections((current) =>
             current.map((section) => {
                 if (section.id !== sectionId) return section;
@@ -77,7 +78,7 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
                 return { ...section, subsections: updated };
             })
         );
-    }, []);
+    }, [clearOutlineError]);
 
     const handleOutlineSubmit = useCallback(
         async (event) => {
@@ -122,7 +123,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
                 userSummary = outlineBrief;
                 outlineGeneratePayload = buildOutlineGeneratePayload(
                     topicText,
-                    normalizedSections
+                    normalizedSections,
+                    models
                 );
             } else {
                 const trimmedInput = outlineJsonInput.trim();
@@ -168,7 +170,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
                 userSummary = outlineBrief;
                 outlineGeneratePayload = buildOutlineGeneratePayload(
                     topicText,
-                    normalizedJsonSections
+                    normalizedJsonSections,
+                    models
                 );
             }
 
@@ -199,18 +202,34 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate }) {
             outlineSections,
             outlineTopic,
             onGenerate,
+            models,
         ]
     );
 
+    const setOutlineTopicSafe = useCallback((value) => {
+        clearOutlineError();
+        setOutlineTopic(value);
+    }, [clearOutlineError]);
+
+    const setOutlineInputModeSafe = useCallback((value) => {
+        clearOutlineError();
+        setOutlineInputMode(value);
+    }, [clearOutlineError]);
+
+    const setOutlineJsonInputSafe = useCallback((value) => {
+        clearOutlineError();
+        setOutlineJsonInput(value);
+    }, [clearOutlineError]);
+
     return {
         outlineTopic,
-        setOutlineTopic,
+        setOutlineTopic: setOutlineTopicSafe,
         outlineInputMode,
-        setOutlineInputMode,
+        setOutlineInputMode: setOutlineInputModeSafe,
         outlineSections,
         setOutlineSections,
         outlineJsonInput,
-        setOutlineJsonInput,
+        setOutlineJsonInput: setOutlineJsonInputSafe,
         outlineError,
         setOutlineError,
         resetOutlineForm,
