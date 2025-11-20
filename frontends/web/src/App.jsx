@@ -58,42 +58,42 @@ function App() {
     ].slice(0, MAX_SAVED_REPORTS));
   }, []);
 
-const {
-  messages,
-  isRunning,
-  setIsRunning,
-  runReportFlow,
+  const {
+    messages,
+    isRunning,
+    setIsRunning,
+    runReportFlow,
     appendMessage,
     stopGeneration,
   } = useChat(apiBase, rememberReport);
 
   const [composerValue, setComposerValue] = useState("");
   const [topicViewBarValue, setTopicViewBarValue] = useState("");
-const [topicViewTopic, setTopicViewTopic] = useState("");
-const [topicViewDraft, setTopicViewDraft] = useState("");
-const [isTopicEditing, setIsTopicEditing] = useState(false);
-const [topicSuggestions, setTopicSuggestions] = useState([]);
-const [topicSuggestionsLoading, setTopicSuggestionsLoading] = useState(false);
-const [topicSuggestionsNonce, setTopicSuggestionsNonce] = useState(0);
-const [selectedSuggestions, setSelectedSuggestions] = useState([]);
-const [topicSelectMode, setTopicSelectMode] = useState(false);
-const topicSelectToggleRef = useRef(null);
-const topicSuggestionsRef = useRef(null);
-const [mode, setMode] = useState("topic");
-const [sectionCount, setSectionCount] = useState(3);
-const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-const modelsPayload = useMemo(
-  () => buildModelsPayload(stageModels),
-  [stageModels]
-);
-const [exploreSuggestions, setExploreSuggestions] = useState([]);
-const [exploreLoading, setExploreLoading] = useState(false);
-const [selectedExploreSuggestions, setSelectedExploreSuggestions] = useState([]);
-const [exploreNonce, setExploreNonce] = useState(0);
-const [exploreSelectMode, setExploreSelectMode] = useState(false);
-const exploreSelectToggleRef = useRef(null);
-const exploreSuggestionsRef = useRef(null);
-const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
+  const [topicViewTopic, setTopicViewTopic] = useState("");
+  const [topicViewDraft, setTopicViewDraft] = useState("");
+  const [isTopicEditing, setIsTopicEditing] = useState(false);
+  const [topicSuggestions, setTopicSuggestions] = useState([]);
+  const [topicSuggestionsLoading, setTopicSuggestionsLoading] = useState(false);
+  const [topicSuggestionsNonce, setTopicSuggestionsNonce] = useState(0);
+  const [selectedSuggestions, setSelectedSuggestions] = useState([]);
+  const [topicSelectMode, setTopicSelectMode] = useState(false);
+  const topicSelectToggleRef = useRef(null);
+  const topicSuggestionsRef = useRef(null);
+  const [mode, setMode] = useState("topic");
+  const [sectionCount, setSectionCount] = useState(3);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const modelsPayload = useMemo(
+    () => buildModelsPayload(stageModels),
+    [stageModels]
+  );
+  const [exploreSuggestions, setExploreSuggestions] = useState([]);
+  const [exploreLoading, setExploreLoading] = useState(false);
+  const [selectedExploreSuggestions, setSelectedExploreSuggestions] = useState([]);
+  const [exploreNonce, setExploreNonce] = useState(0);
+  const [exploreSelectMode, setExploreSelectMode] = useState(false);
+  const exploreSelectToggleRef = useRef(null);
+  const exploreSuggestionsRef = useRef(null);
+  const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
 
   const handleStageModelChange = useCallback((stageKey, value) => {
     setStageModels((current) => ({
@@ -211,7 +211,7 @@ const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
     };
     loadExplore();
     return () => controller.abort();
-  }, [apiBase, exploreNonce, savedReports, savedTopics]);
+  }, [apiBase, exploreNonce, savedReports, savedTopics, suggestionModel]);
 
 
   useEffect(() => {
@@ -254,7 +254,7 @@ const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
     };
     loadSuggestions();
     return () => controller.abort();
-  }, [apiBase, topicSuggestionsNonce, topicViewTopic]);
+  }, [apiBase, topicSuggestionsNonce, topicViewTopic, suggestionModel]);
 
   const openTopicView = useCallback((topic) => {
     const normalized = (topic || "").trim();
@@ -504,7 +504,7 @@ const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
         setIsRunning(false);
       }
     },
-    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount]
+    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount, setIsRunning]
   );
 
   const handleTopicSubmit = useCallback(
@@ -625,40 +625,40 @@ const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
               <div>
                 <p className="topic-view__eyebrow">Explore</p>
               </div>
-                <div className="explore__actions">
+              <div className="explore__actions">
+                <button
+                  type="button"
+                  className="topic-view__pill topic-view__pill--action"
+                  onClick={handleRefreshExplore}
+                  disabled={exploreLoading}
+                  aria-label="Regenerate suggestions"
+                >
+                  {exploreLoading ? "…" : (
+                    <svg className="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M20 4v6h-6l2.24-2.24A6 6 0 0 0 6 12a6 6 0 0 0 6 6 6 6 0 0 0 5.65-3.88l1.88.68A8 8 0 0 1 12 20 8 8 0 0 1 4 12a8 8 0 0 1 12.73-6.36L19 3z" />
+                    </svg>
+                  )}
+                </button>
+                {exploreSuggestions.length > 0 && (
                   <button
                     type="button"
-                    className="topic-view__pill topic-view__pill--action"
-                    onClick={handleRefreshExplore}
-                    disabled={exploreLoading}
-                    aria-label="Regenerate suggestions"
+                    className={`select-toggle${exploreSelectMode ? " select-toggle--active" : ""}`}
+                    onClick={handleToggleExploreSelectMode}
+                    aria-pressed={exploreSelectMode}
+                    aria-label="Toggle select mode"
+                    ref={exploreSelectToggleRef}
                   >
-                    {exploreLoading ? "…" : (
+                    {exploreSelectMode && selectedExploreSuggestions.length ? (
+                      "Save"
+                    ) : (
                       <svg className="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 4v6h-6l2.24-2.24A6 6 0 0 0 6 12a6 6 0 0 0 6 6 6 6 0 0 0 5.65-3.88l1.88.68A8 8 0 0 1 12 20 8 8 0 0 1 4 12a8 8 0 0 1 12.73-6.36L19 3z" />
+                        <path d="M9.5 16.2 5.3 12l-1.4 1.4L9.5 19 20 8.5 18.6 7.1z" />
                       </svg>
                     )}
                   </button>
-                  {exploreSuggestions.length > 0 && (
-                    <button
-                      type="button"
-                      className={`select-toggle${exploreSelectMode ? " select-toggle--active" : ""}`}
-                      onClick={handleToggleExploreSelectMode}
-                      aria-pressed={exploreSelectMode}
-                      aria-label="Toggle select mode"
-                      ref={exploreSelectToggleRef}
-                    >
-                      {exploreSelectMode && selectedExploreSuggestions.length ? (
-                        "Save"
-                      ) : (
-                        <svg className="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M9.5 16.2 5.3 12l-1.4 1.4L9.5 19 20 8.5 18.6 7.1z" />
-                        </svg>
-                      )}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
             <p className="topic-view__description">
               {exploreLoading
                 ? "…"
@@ -772,7 +772,6 @@ const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
             onStageModelChange={handleStageModelChange}
             selectedPreset={selectedPreset}
             onPresetSelect={handlePresetSelect}
-            presetLabel={presetLabel}
           />
         )}
       </main>
