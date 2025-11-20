@@ -5,9 +5,10 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from backend.schemas import GenerateRequest
+from backend.schemas import GenerateRequest, SuggestionsRequest, SuggestionsResponse
 from backend.services.outline_service import OutlineService
 from backend.services.report_service import ReportGeneratorService
+from backend.services.suggestion_service import SuggestionService
 from backend.storage import GeneratedReportStore
 
 app = FastAPI(title="Explorer", version="2.0.0")
@@ -39,6 +40,11 @@ def get_report_store() -> GeneratedReportStore:
     return GeneratedReportStore()
 
 
+@lru_cache
+def get_suggestion_service() -> SuggestionService:
+    return SuggestionService()
+
+
 @app.post("/generate_report")
 def generate_report(
     generate_request: GenerateRequest,
@@ -61,6 +67,14 @@ def generate_report(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.post("/suggestions")
+async def generate_suggestions(
+    suggestions_request: SuggestionsRequest,
+    suggestion_service: SuggestionService = Depends(get_suggestion_service),
+) -> SuggestionsResponse:
+    return await suggestion_service.generate(suggestions_request)
 
 
 @app.get("/_routes")

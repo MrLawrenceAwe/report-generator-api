@@ -8,12 +8,13 @@ import {
 } from '../utils/helpers';
 import { SectionCountSelector } from './SectionCountSelector';
 
-function ModelOverrideToggle({
+export function ModelOverrideToggle({
     isRunning,
     stageModels,
     onStageModelChange,
     selectedPreset,
     onPresetSelect,
+    presetLabel,
     idPrefix,
 }) {
     const toggleRef = useRef(null);
@@ -44,7 +45,7 @@ function ModelOverrideToggle({
                 onClick={() => setOpen((current) => !current)}
                 aria-label="Model overrides"
             >
-                ⚙
+                {presetLabel || "Preset"}
             </button>
             {open && (
                 <div className="model-quick-popover" ref={popoverRef}>
@@ -108,6 +109,7 @@ export function ChatPane({
     onStageModelChange,
     selectedPreset,
     onPresetSelect,
+    presetLabel,
 }) {
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -153,6 +155,7 @@ export function ChatPane({
                             onStageModelChange={onStageModelChange}
                             selectedPreset={selectedPreset}
                             onPresetSelect={onPresetSelect}
+                            presetLabel={presetLabel}
                             idPrefix="topic"
                         />
                     </div>
@@ -194,6 +197,7 @@ export function ChatPane({
                             onStageModelChange={onStageModelChange}
                             selectedPreset={selectedPreset}
                             onPresetSelect={onPresetSelect}
+                            presetLabel={presetLabel}
                             idPrefix="outline"
                         />
                     </div>

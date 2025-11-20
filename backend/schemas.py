@@ -122,3 +122,54 @@ class GenerateRequest(SubjectFilters):
             normalized = self.owner_username.strip()
             self.owner_username = normalized or None
         return self
+
+
+class SuggestionItem(BaseModel):
+    title: str
+    relation: Optional[str] = None
+    source: Literal["guided", "free_roam", "seed"] = "guided"
+
+
+class SuggestionsRequest(BaseModel):
+    topic: Optional[str] = Field(default=None, description="Optional topic anchor for suggestions")
+    seeds: List[str] = Field(default_factory=list, description="Additional seed topics/headings to guide suggestions")
+    enable_free_roam: bool = Field(
+        default=False,
+        description="Run a second prompt without relation cues when true.",
+    )
+    include_report_headings: bool = Field(
+        default=False,
+        description="When true, past report section headings are included as seeds.",
+    )
+    max_suggestions: int = Field(
+        default=12,
+        ge=1,
+        le=25,
+        description="Maximum suggestions to return after merging prompts.",
+    )
+    model: ModelSpec = Field(
+        default_factory=lambda: ModelSpec(model=DEFAULT_TEXT_MODEL),
+        description="Model spec used for suggestion prompts.",
+    )
+
+    @model_validator(mode="after")
+    def normalize_inputs(self):
+        topic = (self.topic or "").strip()
+        self.topic = topic or None
+        normalized_seeds: List[str] = []
+        seen = set()
+        for seed in self.seeds:
+            cleaned = (seed or "").strip()
+            if not cleaned:
+                continue
+            key = cleaned.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized_seeds.append(cleaned)
+        self.seeds = normalized_seeds
+        return self
+
+
+class SuggestionsResponse(BaseModel):
+    suggestions: List[SuggestionItem] = Field(default_factory=list)

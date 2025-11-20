@@ -7,6 +7,7 @@ export const MAX_SAVED_REPORTS = 6;
 export const TOPIC_VIEW_BAR_INPUT_ID = "sidebar-topic-view-bar";
 export const MODEL_PRESET_STORAGE_KEY = "explorer-model-presets";
 export const MODEL_ACTIVE_PRESET_STORAGE_KEY = "explorer-active-model-preset";
+export const SUGGESTION_MODEL_STORAGE_KEY = "explorer-suggestion-model";
 
 export const MODE_TABS = [
     { value: "topic", label: "From Topic" },
@@ -54,6 +55,7 @@ export const MODEL_OPTIONS = [
     { value: "gpt-4o", label: "gpt-4o (slower, better)" },
     { value: "gpt-5-nano", label: "gpt-5-nano" },
 ];
+export const DEFAULT_SUGGESTION_MODEL = "gpt-4o-mini";
 
 export const DEFAULT_STAGE_MODELS = {
     outline: "gpt-4o-mini",
@@ -227,6 +229,59 @@ export function loadActiveModelPreset(presets) {
 
 export function persistActiveModelPreset(preset) {
     localStorage.setItem(MODEL_ACTIVE_PRESET_STORAGE_KEY, preset);
+}
+
+export function loadSuggestionModel() {
+    const stored = localStorage.getItem(SUGGESTION_MODEL_STORAGE_KEY);
+    return stored || DEFAULT_SUGGESTION_MODEL;
+}
+
+export function persistSuggestionModel(model) {
+    const normalized = (model || "").trim();
+    localStorage.setItem(SUGGESTION_MODEL_STORAGE_KEY, normalized || DEFAULT_SUGGESTION_MODEL);
+}
+
+export async function fetchTopicSuggestions(apiBase, {
+    topic,
+    seeds = [],
+    enableFreeRoam = false,
+    includeReportHeadings = true,
+    model,
+    signal,
+} = {}) {
+    const modelSpec = model ? { model } : undefined;
+    const payload = {
+        topic: topic || "",
+        seeds: Array.isArray(seeds) ? seeds : [],
+        enable_free_roam: Boolean(enableFreeRoam),
+        include_report_headings: Boolean(includeReportHeadings),
+        ...(modelSpec ? { model: modelSpec } : {}),
+    };
+    try {
+        const response = await fetch(`${apiBase}/suggestions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal,
+        });
+        if (!response.ok) {
+            throw new Error(`Suggestion request failed: ${response.status}`);
+        }
+        const data = await response.json();
+        const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+        return suggestions
+            .map((entry) => {
+                if (typeof entry === "string") return entry;
+                if (entry && typeof entry === "object") {
+                    return (entry.title || entry.topic || "").trim();
+                }
+                return "";
+            })
+            .filter(Boolean);
+    } catch (error) {
+        console.warn("Falling back to local suggestions", error);
+        return [];
+    }
 }
 
 export function buildModelsPayload(stageModels) {

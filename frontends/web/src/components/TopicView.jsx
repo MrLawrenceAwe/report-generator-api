@@ -1,4 +1,5 @@
 import { SectionCountSelector } from './SectionCountSelector';
+import { ModelOverrideToggle } from './ChatPane';
 
 export function TopicView({
     topic,
@@ -7,9 +8,19 @@ export function TopicView({
     setDraft,
     isSaved,
     suggestions,
+    suggestionsLoading,
+    selectedSuggestions,
+    selectMode,
+    presetLabel,
+    stageModels,
+    onStageModelChange,
+    selectedPreset,
+    onPresetSelect,
     isRunning,
     handlers,
     editorRef,
+    selectToggleRef,
+    suggestionsRef,
 }) {
     const {
         startEditing,
@@ -21,6 +32,9 @@ export function TopicView({
         handleGenerate,
         handleClose,
         handleOpenTopic,
+        handleToggleSuggestion,
+        handleRefreshSuggestions,
+        handleToggleSelectMode,
         sectionCount,
         setSectionCount,
     } = handlers;
@@ -81,7 +95,7 @@ export function TopicView({
                     </div>
                 </div>
                 <button type="button" className="topic-view__close" onClick={handleClose}>
-                    Back
+                    X
                 </button>
             </header>
             <div className="topic-view__actions">
@@ -89,6 +103,15 @@ export function TopicView({
                     value={sectionCount}
                     onChange={setSectionCount}
                     disabled={isRunning}
+                />
+                <ModelOverrideToggle
+                    isRunning={isRunning}
+                    stageModels={stageModels}
+                    onStageModelChange={onStageModelChange}
+                    selectedPreset={selectedPreset}
+                    onPresetSelect={onPresetSelect}
+                    presetLabel={presetLabel}
+                    idPrefix="topicview"
                 />
                 <button
                     type="button"
@@ -102,18 +125,69 @@ export function TopicView({
             <p className="topic-view__description">
                 Explore topics related to <strong>{topic}</strong>.
             </p>
-            <ul className="topic-view__suggestions" aria-label="Suggested related topics">
-                {suggestions.map((suggestion) => (
-                    <li key={suggestion}>
+            <div className="topic-view__suggestions-header">
+                <div>
+                    <p className="topic-view__eyebrow">Suggested topics</p>
+                    <p className="topic-view__description">
+                        {suggestionsLoading ? "Loading suggestions…" : ``}
+                    </p>
+                </div>
+                <div className="topic-view__suggestion-actions">
+                    <button
+                        type="button"
+                        className="topic-view__pill topic-view__pill--action"
+                        onClick={handleRefreshSuggestions}
+                        disabled={suggestionsLoading}
+                        aria-label="Regenerate suggestions"
+                    >
+                        {suggestionsLoading ? "…" : (
+                            <svg className="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M20 4v6h-6l2.24-2.24A6 6 0 0 0 6 12a6 6 0 0 0 6 6 6 6 0 0 0 5.65-3.88l1.88.68A8 8 0 0 1 12 20 8 8 0 0 1 4 12a8 8 0 0 1 12.73-6.36L19 3z" />
+                            </svg>
+                        )}
+                    </button>
+                    {suggestions.length > 0 && (
                         <button
                             type="button"
-                            className="topic-view__pill"
-                            onClick={() => handleOpenTopic(suggestion)}
+                            className={`select-toggle${selectMode ? " select-toggle--active" : ""}`}
+                            onClick={handleToggleSelectMode}
+                            aria-pressed={selectMode}
+                            aria-label="Toggle select mode"
+                            ref={selectToggleRef}
                         >
-                            {suggestion}
+                            {selectMode && selectedSuggestions.length ? (
+                                "Save"
+                            ) : (
+                                <svg className="pill-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M9.5 16.2 5.3 12l-1.4 1.4L9.5 19 20 8.5 18.6 7.1z" />
+                                </svg>
+                            )}
                         </button>
-                    </li>
-                ))}
+                    )}
+                </div>
+            </div>
+            <ul className="topic-view__suggestions" aria-label="Suggested related topics" ref={suggestionsRef}>
+                {suggestions.map((suggestion) => {
+                    const isSelected = selectedSuggestions.includes(suggestion);
+                    return (
+                        <li key={suggestion} className="topic-view__suggestion">
+                            <button
+                                type="button"
+                                className={`topic-view__pill${isSelected ? " topic-view__pill--selected" : ""}`}
+                                onClick={() => {
+                                    if (selectMode) {
+                                        handleToggleSuggestion(suggestion);
+                                    } else {
+                                        handleOpenTopic(suggestion);
+                                    }
+                                }}
+                                title={selectMode ? "Click to select" : "Click to open"}
+                            >
+                                {suggestion}
+                            </button>
+                        </li>
+                    );
+                })}
             </ul>
         </section>
     );

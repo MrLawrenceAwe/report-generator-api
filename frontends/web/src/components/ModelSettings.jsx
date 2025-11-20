@@ -11,13 +11,34 @@ export function ModelSettings({
     onDefaultPresetChange,
     presets,
     onPresetModelChange,
+    suggestionModel,
+    onSuggestionModelChange,
 }) {
     return (
         <section className="sidebar-section model-settings">
             <div className="sidebar-section__header">
                 <h2>Models</h2>
-                <p>Pick per-stage LLMs for each preset.</p>
+                <p>Choose your suggestions engine and per-stage presets for reports.</p>
             </div>
+            <div className="model-suggestion-row">
+                <label className="model-stage model-stage--compact">
+                    <span className="model-stage__label">Suggestions Engine</span>
+                    <div className="model-stage__controls">
+                        <select
+                            value={suggestionModel}
+                            onChange={(event) => onSuggestionModelChange(event.target.value)}
+                            aria-label="Suggestions model"
+                        >
+                            {MODEL_OPTIONS.map((option) => (
+                                <option key={`suggestion-${option.value}`} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </label>
+            </div>
+            <hr className="model-settings__divider" />
             <div className="model-preset-row" role="tablist" aria-label="Model presets">
                 {MODEL_PRESET_ORDER.map((presetKey) => (
                     <button
