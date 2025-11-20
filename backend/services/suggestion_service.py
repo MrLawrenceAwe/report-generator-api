@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Iterable, List, Optional, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -23,32 +23,10 @@ _DEFAULT_DB_URL = "sqlite:///reportgen.db"
 @dataclass(frozen=True)
 class _SuggestionCandidate:
     title: str
-    relation: Optional[str]
     source: str
 
 
 class SuggestionService:
-    """Generate topic suggestions from seeds using one or two prompt variants."""
-
-    _RELATION_CUES = [
-        "subtopics",
-        "supertopics",
-        "applications",
-        "challenges",
-        "benefits",
-        "methods",
-        "foundational topics",
-        "variants",
-        "alternatives/comparatives",
-        "stakeholder perspectives",
-        "trend/directions",
-        "cross-disciplinary links",
-        "history",
-        "research questions",
-        "implications",
-        "key figures (humans)",
-        "key organizations",
-    ]
 
     def __init__(
         self,
@@ -98,7 +76,7 @@ class SuggestionService:
         )
         return SuggestionsResponse(
             suggestions=[
-                SuggestionItem(title=candidate.title, relation=candidate.relation, source=candidate.source)
+                SuggestionItem(title=candidate.title, source=candidate.source)
                 for candidate in merged
             ]
         )
@@ -141,26 +119,22 @@ class SuggestionService:
 
     def _build_prompt(self, seeds: Sequence[str], *, guided: bool) -> str:
         seeds_block = "\n".join(f"- {entry}" for entry in seeds[:20])
-        relation_block = ""
-        if guided:
-            relation_block = (
-                "\nRelation cues you can lean on (only if helpful): "
-                + ", ".join(self._RELATION_CUES)
-                + "."
-            )
+        guidance = (
+            "Keep suggestions tightly related to the seeds; avoid vague tangents."
+            if guided
+            else "You can stray a bit if it helps surface adjacent or contrasting topics."
+        )
         return (
             "You suggest concise, meaningful topics related to the provided seeds. "
             "Return strictly valid JSON."
             f"\n\nSeeds:\n{seeds_block}\n"
             "\nOutput JSON schema:\n"
             "{\n"
-            '  "suggestions": [\n'
-            '    {"title": "Concise topic", "relation": "optional short relation label"},\n'
-            "    ...\n"
-            "  ]\n"
+            '  "suggestions": [{"title": "Concise topic"}]\n'
             "}\n"
-            "Keep titles under 80 characters, avoid duplicates, and skip anything too vague."
-            f"{relation_block}"
+            "Return suggestions as objects (not bare strings). "
+            "Keep titles under 80 characters, avoid duplicates, and skip anything too vague. "
+            f"{guidance}"
         )
 
     def _parse_candidates(
@@ -177,10 +151,10 @@ class SuggestionService:
         else:
             return []
         for entry in entries:
-            title, relation = self._extract_title_relation(entry)
+            title = self._extract_title(entry)
             if not title:
                 continue
-            items.append(_SuggestionCandidate(title=title, relation=relation, source=source))
+            items.append(_SuggestionCandidate(title=title, source=source))
         return items
 
     def _merge_candidates(
@@ -198,7 +172,6 @@ class SuggestionService:
             deduped.append(
                 _SuggestionCandidate(
                     title=normalized,
-                    relation=candidate.relation,
                     source=candidate.source,
                 )
             )
@@ -228,14 +201,13 @@ class SuggestionService:
         return stripped.title()
 
     @staticmethod
-    def _extract_title_relation(entry: object) -> Tuple[Optional[str], Optional[str]]:
+    def _extract_title(entry: object) -> Optional[str]:
         if isinstance(entry, str):
-            return entry, None
+            return entry
         if isinstance(entry, dict):
             title = (entry.get("title") or entry.get("topic") or "").strip()
-            relation = (entry.get("relation") or entry.get("type") or "").strip()
-            return (title or None), (relation or None)
-        return None, None
+            return title or None
+        return None
 
     @staticmethod
     def _try_json_parse(payload: str) -> object:

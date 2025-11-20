@@ -129,7 +129,6 @@ class GenerateRequest(SubjectFilters):
 
 class SuggestionItem(BaseModel):
     title: str
-    relation: Optional[str] = None
     source: Literal["guided", "free_roam", "seed"] = "guided"
 
 
@@ -138,7 +137,7 @@ class SuggestionsRequest(BaseModel):
     seeds: List[str] = Field(default_factory=list, description="Additional seed topics/headings to guide suggestions")
     enable_free_roam: bool = Field(
         default=False,
-        description="Run a second prompt without relation cues when true.",
+        description="Run a second prompt that roams more broadly when true.",
     )
     include_report_headings: bool = Field(
         default=False,

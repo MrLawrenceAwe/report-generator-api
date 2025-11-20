@@ -29,14 +29,14 @@ async def test_suggestions_merge_and_dedupe(tmp_path: Path, monkeypatch):
     guided = json.dumps(
         {
             "suggestions": [
-                {"title": "Quantum Algorithms", "relation": "applications"},
-                {"title": "quantum algorithms", "relation": "duplicate"},
+                {"title": "Quantum Algorithms"},
+                {"title": "quantum algorithms"},
             ]
         }
     )
     free_roam = json.dumps(
         [
-            {"title": "Error Correction", "relation": "methods"},
+            {"title": "Error Correction"},
             "Quantum Hardware",
         ]
     )
