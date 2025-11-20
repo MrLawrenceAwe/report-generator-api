@@ -23,13 +23,3 @@ A modern React application for the Explorer Copilot, built with Vite.
 
    *Note: If your API runs on a different host/port, you can override the API base by appending `?apiBase=http://your-api-url` to the URL. This setting is cached in `localStorage`.*
 
-## Features
-
-- **Pane Layout**: A responsive interface with a sidebar for saved topics and generated report history alongside the main chat canvas.
-- **Dual Modes**:
-    - **Topic Mode**: Generate reports directly from a topic prompt.
-    - **Custom Outline Mode**: Seed report generation with a custom outline (manually built or pasted as JSON).
-- **Interactive UI**:
-    - Stretch-to-fit composer bar.
-    - In-line outline builder.
-    - Real-time report streaming.

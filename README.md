@@ -87,4 +87,25 @@ python -m cli.stream_report --topic "Modern Data Governance for AI Teams" --show
 
 ---
 
+## Maintenance
+
+### Resetting local state
+
+If you need to wipe the database and generated reports to start fresh:
+
+```bash
+python scripts/reset_explorer_state.py
+```
+
+### Resetting UI state
+
+To reset the UI’s remembered topics and reports, clear the `explorer-saved-topics` and `explorer-saved-reports` keys from your browser’s `localStorage`.
+
+You can do this in Chrome DevTools (Application → Local Storage) or by running this in the console:
+
+```javascript
+localStorage.removeItem("explorer-saved-topics");
+localStorage.removeItem("explorer-saved-reports");
+```
+
 
