@@ -5,6 +5,99 @@ import {
     buildOutlineGeneratePayload,
 } from '../utils/helpers';
 
+export function buildOutlinePayload({
+    topicText,
+    outlineInputMode,
+    outlineSections,
+    outlineJsonInput,
+    models,
+}) {
+    let outlineBrief = "";
+    let userSummary = "";
+    let outlineGeneratePayload = null;
+
+    if (outlineInputMode === "lines") {
+        const normalizedSections = outlineSections
+            .map((section) => ({
+                title: section.title.trim(),
+                subsections: section.subsections
+                    .map((entry) => entry.trim())
+                    .filter(Boolean),
+            }))
+            .filter((section) => section.title);
+        if (!normalizedSections.length) {
+            return { error: "Add at least one section." };
+        }
+        outlineBrief = [
+            `Outline topic: ${topicText}`,
+            "Structure:",
+            normalizedSections
+                .map(
+                    (section) =>
+                        `${section.title}\n${section.subsections
+                            .map((entry) => `- ${entry}`)
+                            .join("\n")}`
+                )
+                .join("\n\n"),
+        ].join("\n\n");
+        userSummary = outlineBrief;
+        outlineGeneratePayload = buildOutlineGeneratePayload(
+            topicText,
+            normalizedSections,
+            models
+        );
+    } else {
+        const trimmedInput = outlineJsonInput.trim();
+        if (!trimmedInput) {
+            return { error: "Paste JSON with sections and subsections." };
+        }
+        let normalizedJsonSections = [];
+        try {
+            const parsed = JSON.parse(trimmedInput);
+            if (
+                !parsed ||
+                typeof parsed !== "object" ||
+                !Array.isArray(parsed.sections) ||
+                !parsed.sections.length
+            ) {
+                return { error: "JSON must include a sections array." };
+            }
+            const invalidSection = parsed.sections.find(
+                (section) =>
+                    !section ||
+                    typeof section.title !== "string" ||
+                    !section.title.trim() ||
+                    !Array.isArray(section.subsections)
+            );
+            if (invalidSection) {
+                return { error: "Each JSON section needs a title." };
+            }
+            normalizedJsonSections = parsed.sections.map((section) => ({
+                title: section.title.trim(),
+                subsections: section.subsections
+                    .map((entry) => (entry || "").trim())
+                    .filter(Boolean),
+            }));
+        } catch (error) {
+            console.error(error);
+            return { error: "Fix the JSON before continuing." };
+        }
+        outlineBrief = `Outline topic: ${topicText}\n\nUse this JSON:\n${trimmedInput}`;
+        userSummary = outlineBrief;
+        outlineGeneratePayload = buildOutlineGeneratePayload(
+            topicText,
+            normalizedJsonSections,
+            models
+        );
+    }
+
+    return {
+        payload: outlineGeneratePayload,
+        userSummary,
+        error: null,
+    };
+}
+
 export function useOutlineForm({ isRunning, appendMessage, onGenerate, models }) {
     const [outlineTopic, setOutlineTopic] = useState("");
     const [outlineInputMode, setOutlineInputMode] = useState("lines");
@@ -91,91 +184,20 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
                 return;
             }
 
-            let outlineBrief = "";
-            let userSummary = "";
-            let outlineGeneratePayload = null;
+            const { payload, userSummary, error } = buildOutlinePayload({
+                topicText,
+                outlineInputMode,
+                outlineSections,
+                outlineJsonInput,
+                models,
+            });
 
-            if (outlineInputMode === "lines") {
-                const normalizedSections = outlineSections
-                    .map((section) => ({
-                        title: section.title.trim(),
-                        subsections: section.subsections
-                            .map((entry) => entry.trim())
-                            .filter(Boolean),
-                    }))
-                    .filter((section) => section.title);
-                if (!normalizedSections.length) {
-                    setOutlineError("Add at least one section.");
-                    return;
-                }
-                outlineBrief = [
-                    `Outline topic: ${topicText}`,
-                    "Structure:",
-                    normalizedSections
-                        .map(
-                            (section) =>
-                                `${section.title}\n${section.subsections
-                                    .map((entry) => `- ${entry}`)
-                                    .join("\n")}`
-                        )
-                        .join("\n\n"),
-                ].join("\n\n");
-                userSummary = outlineBrief;
-                outlineGeneratePayload = buildOutlineGeneratePayload(
-                    topicText,
-                    normalizedSections,
-                    models
-                );
-            } else {
-                const trimmedInput = outlineJsonInput.trim();
-                if (!trimmedInput) {
-                    setOutlineError("Paste JSON with sections and subsections.");
-                    return;
-                }
-                let normalizedJsonSections = [];
-                try {
-                    const parsed = JSON.parse(trimmedInput);
-                    if (
-                        !parsed ||
-                        typeof parsed !== "object" ||
-                        !Array.isArray(parsed.sections) ||
-                        !parsed.sections.length
-                    ) {
-                        setOutlineError("JSON must include a sections array.");
-                        return;
-                    }
-                    const invalidSection = parsed.sections.find(
-                        (section) =>
-                            !section ||
-                            typeof section.title !== "string" ||
-                            !section.title.trim() ||
-                            !Array.isArray(section.subsections)
-                    );
-                    if (invalidSection) {
-                        setOutlineError("Each JSON section needs a title.");
-                        return;
-                    }
-                    normalizedJsonSections = parsed.sections.map((section) => ({
-                        title: section.title.trim(),
-                        subsections: section.subsections
-                            .map((entry) => (entry || "").trim())
-                            .filter(Boolean),
-                    }));
-                } catch (error) {
-                    console.error(error);
-                    setOutlineError("Fix the JSON before continuing.");
-                    return;
-                }
-                outlineBrief = `Outline topic: ${topicText}\n\nUse this JSON:\n${trimmedInput}`;
-                userSummary = outlineBrief;
-                outlineGeneratePayload = buildOutlineGeneratePayload(
-                    topicText,
-                    normalizedJsonSections,
-                    models
-                );
+            if (error) {
+                setOutlineError(error);
+                return;
             }
 
-            if (!outlineGeneratePayload) {
+            if (!payload) {
                 setOutlineError("Unable to prepare the outline request.");
                 return;
             }
@@ -191,7 +213,7 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
             setOutlineError("");
 
             if (onGenerate) {
-                await onGenerate(outlineGeneratePayload, assistantId, topicText);
+                await onGenerate(payload, assistantId, topicText);
             }
         },
         [

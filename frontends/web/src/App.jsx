@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useChat } from './hooks/useChat';
 import { useOutlineForm } from './hooks/useOutlineForm';
+import { useSettings } from './hooks/useSettings';
+import { usePersistence } from './hooks/usePersistence';
+import { useExplore } from './hooks/useExplore';
+import { useTopicView } from './hooks/useTopicView';
 import { Sidebar } from './components/Sidebar';
 import { ChatPane } from './components/ChatPane';
 import { TopicView } from './components/TopicView';
@@ -8,23 +12,12 @@ import { OutlineForm } from './components/OutlineForm';
 import {
   loadApiBase,
   loadSavedList,
-  persistList,
-  generateRelatedTopics,
   SAVED_TOPICS_KEY,
   SAVED_REPORTS_KEY,
   MAX_SAVED_TOPICS,
   MAX_SAVED_REPORTS,
   MODE_TABS,
   summarizeReport,
-  loadModelPresets,
-  loadActiveModelPreset,
-  persistModelPresets,
-  persistActiveModelPreset,
-  buildModelsPayload,
-  normalizeModelPresets,
-  fetchTopicSuggestions,
-  loadSuggestionModel,
-  persistSuggestionModel,
   MODEL_PRESET_LABELS,
 } from './utils/helpers';
 import { ModelSettings } from './components/ModelSettings';
@@ -33,17 +26,34 @@ function App() {
   const [apiBase] = useState(loadApiBase);
   const [savedTopics, setSavedTopics] = useState(() => loadSavedList(SAVED_TOPICS_KEY));
   const [savedReports, setSavedReports] = useState(() => loadSavedList(SAVED_REPORTS_KEY));
-  const [modelPresets, setModelPresets] = useState(loadModelPresets);
-  const [defaultPreset, setDefaultPreset] = useState(() =>
-    loadActiveModelPreset(loadModelPresets())
-  );
-  const [selectedPreset, setSelectedPreset] = useState(() =>
-    loadActiveModelPreset(loadModelPresets())
-  );
-  const [stageModels, setStageModels] = useState(() => {
-    const presets = loadModelPresets();
-    const presetKey = loadActiveModelPreset(presets);
-    return { ...presets[presetKey] };
+  const [composerValue, setComposerValue] = useState("");
+  const [topicViewBarValue, setTopicViewBarValue] = useState("");
+  const [mode, setMode] = useState("topic");
+  const [sectionCount, setSectionCount] = useState(3);
+
+  const {
+    modelPresets,
+    defaultPreset,
+    selectedPreset,
+    stageModels,
+    isSettingsOpen,
+    suggestionModel,
+    modelsPayload,
+    handleStageModelChange,
+    handlePresetModelChange,
+    handlePresetSelect,
+    handleDefaultPresetChange,
+    handleOpenSettings,
+    handleCloseSettings,
+    handleSuggestionModelChange,
+  } = useSettings();
+
+  usePersistence({
+    savedTopics,
+    savedReports,
+    modelPresets,
+    defaultPreset,
+    suggestionModel,
   });
 
   const rememberReport = useCallback((topic, content) => {
@@ -67,285 +77,6 @@ function App() {
     stopGeneration,
   } = useChat(apiBase, rememberReport);
 
-  const [composerValue, setComposerValue] = useState("");
-  const [topicViewBarValue, setTopicViewBarValue] = useState("");
-  const [topicViewTopic, setTopicViewTopic] = useState("");
-  const [topicViewDraft, setTopicViewDraft] = useState("");
-  const [isTopicEditing, setIsTopicEditing] = useState(false);
-  const [topicSuggestions, setTopicSuggestions] = useState([]);
-  const [topicSuggestionsLoading, setTopicSuggestionsLoading] = useState(false);
-  const [topicSuggestionsNonce, setTopicSuggestionsNonce] = useState(0);
-  const [selectedSuggestions, setSelectedSuggestions] = useState([]);
-  const [topicSelectMode, setTopicSelectMode] = useState(false);
-  const topicSelectToggleRef = useRef(null);
-  const topicSuggestionsRef = useRef(null);
-  const [mode, setMode] = useState("topic");
-  const [sectionCount, setSectionCount] = useState(3);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const modelsPayload = useMemo(
-    () => buildModelsPayload(stageModels),
-    [stageModels]
-  );
-  const [exploreSuggestions, setExploreSuggestions] = useState([]);
-  const [exploreLoading, setExploreLoading] = useState(false);
-  const [selectedExploreSuggestions, setSelectedExploreSuggestions] = useState([]);
-  const [exploreNonce, setExploreNonce] = useState(0);
-  const [exploreSelectMode, setExploreSelectMode] = useState(false);
-  const exploreSelectToggleRef = useRef(null);
-  const exploreSuggestionsRef = useRef(null);
-  const [suggestionModel, setSuggestionModel] = useState(loadSuggestionModel);
-
-  const handleStageModelChange = useCallback((stageKey, value) => {
-    setStageModels((current) => ({
-      ...current,
-      [stageKey]: value,
-    }));
-  }, []);
-
-  const handlePresetModelChange = useCallback((presetKey, stageKey, value) => {
-    setModelPresets((current) =>
-      normalizeModelPresets({
-        ...current,
-        [presetKey]: { ...(current[presetKey] || {}), [stageKey]: value },
-      })
-    );
-  }, []);
-
-  const handlePresetSelect = useCallback((presetKey) => {
-    setSelectedPreset(presetKey);
-  }, []);
-
-  const handleDefaultPresetChange = useCallback((presetKey) => {
-    setDefaultPreset(presetKey);
-    setSelectedPreset(presetKey);
-  }, []);
-
-  const handleOpenSettings = useCallback(() => setIsSettingsOpen(true), []);
-  const handleCloseSettings = useCallback(() => setIsSettingsOpen(false), []);
-
-
-  const {
-    outlineTopic,
-    setOutlineTopic,
-    outlineInputMode,
-    setOutlineInputMode,
-    outlineSections,
-    outlineJsonInput,
-    setOutlineJsonInput,
-    outlineError,
-    resetOutlineForm,
-    handleAddOutlineSection,
-    handleRemoveOutlineSection,
-    handleOutlineSectionTitleChange,
-    handleOutlineSubsectionChange,
-    handleAddSubsectionLine,
-    handleRemoveSubsectionLine,
-    handleOutlineSubmit,
-  } = useOutlineForm({
-    isRunning,
-    appendMessage,
-    models: modelsPayload,
-    onGenerate: async (payload, assistantId, topicText) => {
-      const wasSuccessful = await runReportFlow(
-        payload,
-        assistantId,
-        topicText
-      );
-      setIsRunning(false);
-      if (wasSuccessful) {
-        resetOutlineForm();
-      }
-    }
-  });
-
-  const topicViewEditorRef = useRef(null);
-  const skipTopicCommitRef = useRef(false);
-
-  useEffect(() => {
-    persistList(SAVED_TOPICS_KEY, savedTopics);
-  }, [savedTopics]);
-
-  useEffect(() => {
-    persistList(SAVED_REPORTS_KEY, savedReports);
-  }, [savedReports]);
-
-  useEffect(() => {
-    persistModelPresets(modelPresets);
-  }, [modelPresets]);
-
-  useEffect(() => {
-    persistActiveModelPreset(defaultPreset);
-  }, [defaultPreset]);
-
-  useEffect(() => {
-    const normalized = normalizeModelPresets(modelPresets);
-    const selected = normalized[selectedPreset] || normalized[defaultPreset] || normalized.fast;
-    setStageModels({ ...selected });
-  }, [defaultPreset, modelPresets, selectedPreset]);
-
-  useEffect(() => {
-    persistSuggestionModel(suggestionModel);
-  }, [suggestionModel]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const loadExplore = async () => {
-      setExploreLoading(true);
-      setSelectedExploreSuggestions([]);
-      const seeds = [
-        ...savedTopics.map((entry) => entry.prompt),
-        ...savedReports.map((entry) => entry.topic),
-      ];
-      const remote = await fetchTopicSuggestions(apiBase, {
-        seeds,
-        enableFreeRoam: false,
-        model: suggestionModel,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      const fallbackSeeds = seeds.filter(Boolean).slice(0, 1);
-      const localFallback = fallbackSeeds.length ? generateRelatedTopics(fallbackSeeds[0]) : [];
-      const merged = remote.length ? remote : localFallback;
-      setExploreSuggestions(merged);
-      setExploreLoading(false);
-    };
-    loadExplore();
-    return () => controller.abort();
-  }, [apiBase, exploreNonce, savedReports, savedTopics, suggestionModel]);
-
-
-  useEffect(() => {
-    setTopicViewDraft(topicViewTopic);
-    setIsTopicEditing(false);
-    setSelectedSuggestions([]);
-    setTopicSelectMode(false);
-  }, [topicViewTopic]);
-
-  useEffect(() => {
-    if (isTopicEditing) {
-      topicViewEditorRef.current?.focus();
-      topicViewEditorRef.current?.select?.();
-    }
-  }, [isTopicEditing]);
-
-  useEffect(() => {
-    if (!topicViewTopic) {
-      setTopicSuggestions([]);
-      setSelectedSuggestions([]);
-      setTopicSelectMode(false);
-      return undefined;
-    }
-    const controller = new AbortController();
-    setTopicSuggestionsLoading(true);
-    setSelectedSuggestions([]);
-    const loadSuggestions = async () => {
-      const remote = await fetchTopicSuggestions(apiBase, {
-        topic: topicViewTopic,
-        seeds: [],
-        enableFreeRoam: false,
-        includeReportHeadings: false,
-        model: suggestionModel,
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      const merged = remote.length ? remote : generateRelatedTopics(topicViewTopic);
-      setTopicSuggestions(merged);
-      setTopicSuggestionsLoading(false);
-    };
-    loadSuggestions();
-    return () => controller.abort();
-  }, [apiBase, topicSuggestionsNonce, topicViewTopic, suggestionModel]);
-
-  const openTopicView = useCallback((topic) => {
-    const normalized = (topic || "").trim();
-    if (!normalized) return;
-    setTopicViewTopic(normalized);
-  }, []);
-
-  const closeTopicView = useCallback(() => {
-    setTopicViewTopic("");
-  }, []);
-
-  const startTopicEditing = useCallback(() => {
-    if (!topicViewTopic) return;
-    skipTopicCommitRef.current = false;
-    setTopicViewDraft(topicViewTopic);
-    setIsTopicEditing(true);
-  }, [topicViewTopic]);
-
-  const cancelTopicEditing = useCallback(() => {
-    skipTopicCommitRef.current = true;
-    setTopicViewDraft(topicViewTopic);
-    setIsTopicEditing(false);
-  }, [topicViewTopic]);
-
-  const commitTopicEdit = useCallback(() => {
-    if (skipTopicCommitRef.current) {
-      skipTopicCommitRef.current = false;
-      return;
-    }
-    const normalized = topicViewDraft.trim();
-    setIsTopicEditing(false);
-    if (normalized && normalized !== topicViewTopic) {
-      setTopicViewTopic(normalized);
-    } else {
-      setTopicViewDraft(topicViewTopic);
-    }
-  }, [topicViewDraft, topicViewTopic]);
-
-  const handleTopicEditSubmit = useCallback(
-    (event) => {
-      event.preventDefault();
-      commitTopicEdit();
-    },
-    [commitTopicEdit]
-  );
-
-  const handleTopicEditBlur = useCallback(() => {
-    commitTopicEdit();
-  }, [commitTopicEdit]);
-
-  const handleTopicEditKeyDown = useCallback(
-    (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cancelTopicEditing();
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        commitTopicEdit();
-      }
-    },
-    [cancelTopicEditing, commitTopicEdit]
-  );
-
-  const handleTopicTitleKeyDown = useCallback(
-    (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        startTopicEditing();
-      }
-    },
-    [startTopicEditing]
-  );
-
-  const handleTopicViewBarSubmit = useCallback(
-    (event) => {
-      event.preventDefault();
-      const normalized = topicViewBarValue.trim();
-      if (!normalized) return;
-      openTopicView(normalized);
-      setTopicViewBarValue("");
-    },
-    [openTopicView, topicViewBarValue]
-  );
-
-  const handleTopicRecall = useCallback(
-    (topic) => {
-      openTopicView(topic);
-    },
-    [openTopicView]
-  );
-
   const rememberTopics = useCallback((prompts) => {
     const normalizedPrompts = (Array.isArray(prompts) ? prompts : [prompts])
       .map((entry) => (entry || "").trim())
@@ -367,110 +98,6 @@ function App() {
     (prompt) => rememberTopics([prompt]),
     [rememberTopics]
   );
-
-  const handleSuggestionModelChange = useCallback((model) => {
-    setSuggestionModel(model);
-  }, []);
-
-  const handleSuggestionToggle = useCallback((title) => {
-    const normalized = (title || "").trim();
-    if (!normalized) return;
-    setSelectedSuggestions((current) => {
-      if (current.includes(normalized)) {
-        return current.filter((entry) => entry !== normalized);
-      }
-      return [...current, normalized];
-    });
-  }, []);
-
-  const handleSaveSelectedSuggestions = useCallback(() => {
-    if (!selectedSuggestions.length) return;
-    rememberTopics(selectedSuggestions);
-    setSelectedSuggestions([]);
-    setTopicSelectMode(false);
-  }, [rememberTopics, selectedSuggestions]);
-
-  const handleRefreshSuggestions = useCallback(() => {
-    setTopicSuggestionsNonce((value) => value + 1);
-  }, []);
-
-  const handleToggleExploreSuggestion = useCallback((title) => {
-    const normalized = (title || "").trim();
-    if (!normalized) return;
-    setSelectedExploreSuggestions((current) => {
-      if (current.includes(normalized)) {
-        return current.filter((entry) => entry !== normalized);
-      }
-      return [...current, normalized];
-    });
-  }, []);
-
-  const handleSaveSelectedExplore = useCallback(() => {
-    if (!selectedExploreSuggestions.length) return;
-    rememberTopics(selectedExploreSuggestions);
-    setSelectedExploreSuggestions([]);
-    setExploreSelectMode(false);
-  }, [rememberTopics, selectedExploreSuggestions]);
-
-  const handleRefreshExplore = useCallback(() => {
-    setExploreNonce((value) => value + 1);
-  }, []);
-
-  const handleToggleExploreSelectMode = useCallback(() => {
-    if (!exploreSelectMode) {
-      setSelectedExploreSuggestions([]);
-      setExploreSelectMode(true);
-      return;
-    }
-    if (selectedExploreSuggestions.length) {
-      handleSaveSelectedExplore();
-      return;
-    }
-    setSelectedExploreSuggestions([]);
-    setExploreSelectMode(false);
-  }, [exploreSelectMode, handleSaveSelectedExplore, selectedExploreSuggestions.length]);
-
-  const handleToggleTopicSelectMode = useCallback(() => {
-    if (!topicSelectMode) {
-      setSelectedSuggestions([]);
-      setTopicSelectMode(true);
-      return;
-    }
-    if (selectedSuggestions.length) {
-      handleSaveSelectedSuggestions();
-      return;
-    }
-    setSelectedSuggestions([]);
-    setTopicSelectMode(false);
-  }, [handleSaveSelectedSuggestions, selectedSuggestions.length, topicSelectMode]);
-
-  useEffect(() => {
-    const handleGlobalClick = (event) => {
-      const target = event.target;
-      if (
-        exploreSelectMode &&
-        exploreSuggestionsRef.current &&
-        !exploreSuggestionsRef.current.contains(target) &&
-        !exploreSelectToggleRef.current?.contains(target)
-      ) {
-        setSelectedExploreSuggestions([]);
-        setExploreSelectMode(false);
-      }
-      if (
-        topicSelectMode &&
-        topicSuggestionsRef.current &&
-        !topicSuggestionsRef.current.contains(target) &&
-        !topicSelectToggleRef.current?.contains(target)
-      ) {
-        setSelectedSuggestions([]);
-        setTopicSelectMode(false);
-      }
-    };
-    document.addEventListener("mousedown", handleGlobalClick);
-    return () => document.removeEventListener("mousedown", handleGlobalClick);
-  }, [exploreSelectMode, topicSelectMode]);
-
-
 
   const runTopicPrompt = useCallback(
     async (prompt) => {
@@ -507,6 +134,93 @@ function App() {
     [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount, setIsRunning]
   );
 
+  const {
+    exploreSuggestions,
+    exploreLoading,
+    selectedExploreSuggestions,
+    exploreSelectMode,
+    exploreSelectToggleRef,
+    exploreSuggestionsRef,
+    handleRefreshExplore,
+    handleToggleExploreSuggestion,
+    handleToggleExploreSelectMode,
+  } = useExplore({
+    apiBase,
+    savedTopics,
+    savedReports,
+    suggestionModel,
+    rememberTopics,
+  });
+
+  const {
+    topicViewTopic,
+    topicViewDraft,
+    setTopicViewDraft,
+    isTopicEditing,
+    topicSuggestions,
+    topicSuggestionsLoading,
+    selectedSuggestions,
+    topicSelectMode,
+    topicSelectToggleRef,
+    topicSuggestionsRef,
+    topicViewEditorRef,
+    openTopicView,
+    closeTopicView,
+    startTopicEditing,
+    cancelTopicEditing,
+    commitTopicEdit,
+    handleTopicEditSubmit,
+    handleTopicEditBlur,
+    handleTopicEditKeyDown,
+    handleTopicTitleKeyDown,
+    handleTopicViewGenerate,
+    handleTopicViewSave,
+    handleSuggestionToggle,
+    handleSaveSelectedSuggestions,
+    handleRefreshSuggestions,
+    handleToggleTopicSelectMode,
+  } = useTopicView({
+    apiBase,
+    suggestionModel,
+    rememberTopics,
+    isRunning,
+    runTopicPrompt,
+  });
+
+  const {
+    outlineTopic,
+    setOutlineTopic,
+    outlineInputMode,
+    setOutlineInputMode,
+    outlineSections,
+    outlineJsonInput,
+    setOutlineJsonInput,
+    outlineError,
+    resetOutlineForm,
+    handleAddOutlineSection,
+    handleRemoveOutlineSection,
+    handleOutlineSectionTitleChange,
+    handleOutlineSubsectionChange,
+    handleAddSubsectionLine,
+    handleRemoveSubsectionLine,
+    handleOutlineSubmit,
+  } = useOutlineForm({
+    isRunning,
+    appendMessage,
+    models: modelsPayload,
+    onGenerate: async (payload, assistantId, topicText) => {
+      const wasSuccessful = await runReportFlow(
+        payload,
+        assistantId,
+        topicText
+      );
+      setIsRunning(false);
+      if (wasSuccessful) {
+        resetOutlineForm();
+      }
+    }
+  });
+
   const handleTopicSubmit = useCallback(
     async (event) => {
       event.preventDefault();
@@ -518,18 +232,23 @@ function App() {
     [composerValue, isRunning, runTopicPrompt]
   );
 
-  const handleTopicViewGenerate = useCallback(async () => {
-    if (!topicViewTopic || isRunning) return;
-    closeTopicView();
-    await runTopicPrompt(topicViewTopic);
-  }, [closeTopicView, isRunning, runTopicPrompt, topicViewTopic]);
+  const handleTopicViewBarSubmit = useCallback(
+    (event) => {
+      event.preventDefault();
+      const normalized = topicViewBarValue.trim();
+      if (!normalized) return;
+      openTopicView(normalized);
+      setTopicViewBarValue("");
+    },
+    [openTopicView, topicViewBarValue]
+  );
 
-  const handleTopicViewSave = useCallback(() => {
-    if (!topicViewTopic) return;
-    rememberTopic(topicViewTopic);
-  }, [rememberTopic, topicViewTopic]);
-
-
+  const handleTopicRecall = useCallback(
+    (topic) => {
+      openTopicView(topic);
+    },
+    [openTopicView]
+  );
 
   const composerButtonLabel = isRunning ? "Stop" : "Generate Report";
   const outlineSubmitLabel = isRunning ? "Working…" : "Generate report";
