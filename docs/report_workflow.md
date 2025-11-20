@@ -81,6 +81,14 @@ When the writer fails, `_maybe_activate_writer_fallback` swaps in `writer_fallba
 
 Failures at any stage trigger `discard_report`, which deletes artifacts and DB rows. Frontends therefore do not need a manual cleanup flow for aborted runs.
 
+## Resetting local state after manual testing
+
+`python scripts/reset_explorer_state.py` now wipes everything that the backend and CLI create: it removes the artifacts directory you point at (`data/reports` by default) and, unless you pass `--keep-db`, deletes `reportgen.db` together with its WAL/SHM companions so the database tables start empty. Removing the DB also reverts `SavedTopic`/`User` rows, so running the script without `--keep-db` feels like the very first install. Supply `--db-path` or `--data-dir` to target alternate locations if you have configured `EXPLORER_DATABASE_URL`/`EXPLORER_REPORT_STORAGE_DIR`.
+
+If a quicker cleanup is enough, `--keep-db` preserves the existing SQLite file and simply clears the `reports` table (identical to the old `clean_reports.py` behavior) before vacuuming.
+
+To reset the UI’s remembered topics/reports along with the backend state, clear the `explorer-saved-topics` and `explorer-saved-reports` keys from your browser’s `localStorage` (Application → Local Storage → [origin] in DevTools or run `localStorage.removeItem("explorer-saved-topics"); localStorage.removeItem("explorer-saved-reports");` in the console). That combination leaves the system in the same state as a fresh install.
+
 ## Integration Checklist
 
 1. **Build a typed client.** Mirror `cli/stream_report.py` logic for payload validation, subject-filter cleanup, and owner metadata handling.

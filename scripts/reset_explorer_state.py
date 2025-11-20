@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Utility helpers for cleaning report artifacts and database rows."""
+"""Reset Explorer storage, reports, saved topics, and SQLite state so manual testing feels like a fresh install."""
 from __future__ import annotations
 
 import argparse
@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 import sqlite3
+
 
 def _remove_directory(path: Path, verbose: bool) -> None:
     if path.exists():
@@ -17,7 +18,8 @@ def _remove_directory(path: Path, verbose: bool) -> None:
         if verbose:
             print(f"Directory {path} does not exist (skipped)")
 
-def _vacuum_db(db_path: Path, verbose: bool) -> None:
+
+def _clear_reports_table(db_path: Path, verbose: bool) -> None:
     if not db_path.exists():
         if verbose:
             print(f"Database {db_path} not found; skipping DB cleanup")
@@ -33,8 +35,22 @@ def _vacuum_db(db_path: Path, verbose: bool) -> None:
         conn.close()
 
 
+def _remove_database_files(db_path: Path, verbose: bool) -> None:
+    removed_any = False
+    base = str(db_path)
+    candidates = [db_path, Path(f"{base}-wal"), Path(f"{base}-shm")]
+    for candidate in candidates:
+        if candidate.exists():
+            candidate.unlink()
+            removed_any = True
+            if verbose:
+                print(f"Removed {candidate}")
+    if not removed_any and verbose:
+        print(f"No SQLite files found at {db_path} (skipped)")
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Cleanup helper for report artifacts")
+    parser = argparse.ArgumentParser(description="Reset Explorer artifacts and database state for testing")
     parser.add_argument(
         "--data-dir",
         default="data/reports",
@@ -48,7 +64,7 @@ def main() -> None:
     parser.add_argument(
         "--keep-db",
         action="store_true",
-        help="If set, do not modify the reports table in the DB.",
+        help="Preserve the SQLite file (clears only the reports table, as before).",
     )
     parser.add_argument(
         "--verbose",
@@ -63,8 +79,11 @@ def main() -> None:
     if args.verbose:
         print(f"Recreated clean directory {data_path}")
 
-    if not args.keep_db:
-        _vacuum_db(Path(args.db_path), args.verbose)
+    db_path = Path(args.db_path)
+    if args.keep_db:
+        _clear_reports_table(db_path, args.verbose)
+    else:
+        _remove_database_files(db_path, args.verbose)
 
 
 if __name__ == "__main__":
