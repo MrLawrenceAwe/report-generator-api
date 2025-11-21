@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TOPIC_VIEW_BAR_INPUT_ID } from '../utils/helpers';
 
 export function Sidebar({
@@ -11,6 +11,11 @@ export function Sidebar({
     onOpenSettings,
     onReportSelect,
 }) {
+    const [topicsCollapsed, setTopicsCollapsed] = useState(false);
+    const [reportsCollapsed, setReportsCollapsed] = useState(false);
+    const hasTopics = savedTopics.length > 0;
+    const hasReports = savedReports.length > 0;
+
     return (
         <aside className="sidebar" aria-label="Saved prompts and generated reports">
             <div className="sidebar__brand">
@@ -43,49 +48,83 @@ export function Sidebar({
             </section>
             <section className="sidebar-section">
                 <div className="sidebar-section__header">
-                    <h2>Saved topics</h2>
+                    <button
+                        type="button"
+                        className="sidebar-section__toggle"
+                        aria-expanded={!topicsCollapsed}
+                        aria-controls="sidebar-saved-topics"
+                        onClick={() => setTopicsCollapsed((prev) => !prev)}
+                    >
+                        <div className="sidebar-section__heading">
+                            <h2>Saved topics</h2>
+                            <span className="sidebar-section__count">{savedTopics.length}</span>
+                        </div>
+                        <span
+                            className={`sidebar-section__chevron${topicsCollapsed ? ' sidebar-section__chevron--collapsed' : ''}`}
+                            aria-hidden="true"
+                        />
+                    </button>
                 </div>
-                {savedTopics.length > 0 ? (
-                    <ul className="sidebar-list">
-                        {savedTopics.map((topic) => (
-                            <li key={topic.id}>
-                                <button
-                                    type="button"
-                                    className="sidebar-entry"
-                                    onClick={() => handleTopicRecall(topic.prompt)}
-                                >
-                                    <span className="sidebar-entry__eyebrow">Topic</span>
-                                    <span className="sidebar-entry__title">{topic.prompt}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="sidebar__empty">No saved topics yet.</p>
+                {!topicsCollapsed && (
+                    hasTopics ? (
+                        <ul className="sidebar-list" id="sidebar-saved-topics">
+                            {savedTopics.map((topic) => (
+                                <li key={topic.id}>
+                                    <button
+                                        type="button"
+                                        className="sidebar-entry"
+                                        onClick={() => handleTopicRecall(topic.prompt)}
+                                    >
+                                        <span className="sidebar-entry__eyebrow">Topic</span>
+                                        <span className="sidebar-entry__title">{topic.prompt}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="sidebar__empty" id="sidebar-saved-topics">No saved topics yet.</p>
+                    )
                 )}
             </section>
             <section className="sidebar-section">
                 <div className="sidebar-section__header">
-                    <h2>Generated reports</h2>
+                    <button
+                        type="button"
+                        className="sidebar-section__toggle"
+                        aria-expanded={!reportsCollapsed}
+                        aria-controls="sidebar-saved-reports"
+                        onClick={() => setReportsCollapsed((prev) => !prev)}
+                    >
+                        <div className="sidebar-section__heading">
+                            <h2>Generated reports</h2>
+                            <span className="sidebar-section__count">{savedReports.length}</span>
+                        </div>
+                        <span
+                            className={`sidebar-section__chevron${reportsCollapsed ? ' sidebar-section__chevron--collapsed' : ''}`}
+                            aria-hidden="true"
+                        />
+                    </button>
                 </div>
-                {savedReports.length > 0 ? (
-                    <ul className="sidebar-list">
-                        {savedReports.map((report) => (
-                            <li key={report.id}>
-                                <button
-                                    type="button"
-                                    className="sidebar-entry sidebar-entry--report"
-                                    onClick={() => onReportSelect?.(report)}
-                                    aria-label={`Open report ${report.title || report.topic}`}
-                                >
-                                    <span className="sidebar-entry__eyebrow">Report</span>
-                                    <span className="sidebar-entry__title">{report.topic}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="sidebar__empty">No reports yet.</p>
+                {!reportsCollapsed && (
+                    hasReports ? (
+                        <ul className="sidebar-list" id="sidebar-saved-reports">
+                            {savedReports.map((report) => (
+                                <li key={report.id}>
+                                    <button
+                                        type="button"
+                                        className="sidebar-entry sidebar-entry--report"
+                                        onClick={() => onReportSelect?.(report)}
+                                        aria-label={`Open report ${report.title || report.topic}`}
+                                    >
+                                        <span className="sidebar-entry__eyebrow">Report</span>
+                                        <span className="sidebar-entry__title">{report.topic}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="sidebar__empty" id="sidebar-saved-reports">No reports yet.</p>
+                    )
                 )}
             </section>
         </aside>
