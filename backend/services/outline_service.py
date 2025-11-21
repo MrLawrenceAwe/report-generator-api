@@ -8,11 +8,13 @@ from backend.schemas import (
     ModelSpec,
     Outline,
     OutlineRequest,
+    ReasoningEffort,
     Section,
     SubjectFilters,
 )
 from backend.utils.openai_client import OpenAITextClient, get_default_text_client
 from backend.utils.prompts import build_outline_prompt_json, build_outline_prompt_markdown
+from backend.utils.model_utils import supports_reasoning
 
 
 class OutlineService:

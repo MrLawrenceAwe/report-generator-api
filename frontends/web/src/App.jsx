@@ -144,7 +144,7 @@ function App() {
             topic: normalizedPrompt,
             mode: "generate_report",
             return: "report_with_outline",
-            sections: sectionCount,
+            sections: sectionCount || undefined,
             models: modelsPayload,
           },
           assistantId,
