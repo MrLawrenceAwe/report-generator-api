@@ -30,49 +30,52 @@
     /* Dark Theme (Default) */
     color-scheme: dark;
 
-    /* Base Colors */
-    --color-bg-base: #030712;
-    /* Very dark gray/blue */
-    --color-bg-surface: #0f172a;
-    /* Slate 900 */
-    --color-bg-surface-hover: #1e293b;
-    /* Slate 800 */
-    --color-bg-highlight: #334155;
-    /* Slate 700 */
+    /* Base Colors (Standard Dark) */
+    --color-bg-base: #121212;
+    /* Material Dark Base */
+    --color-bg-surface: #1e1e1e;
+    /* Lighter Surface */
+    --color-bg-surface-hover: #2a2a2a;
+    /* Hover State */
+    --color-bg-highlight: #333333;
+    /* Highlight */
 
-    /* Text Colors */
-    --color-text-primary: #f8fafc;
-    /* Slate 50 */
-    --color-text-secondary: #cbd5e1;
-    /* Slate 300 */
-    --color-text-tertiary: #94a3b8;
-    /* Slate 400 */
-    --color-text-muted: #64748b;
-    /* Slate 500 */
+    /* Text Colors (High Contrast) */
+    --color-text-primary: #ffffff;
+    /* Pure White */
+    --color-text-secondary: #e5e5e5;
+    /* Light Gray */
+    --color-text-tertiary: #a3a3a3;
+    /* Medium Gray */
+    --color-text-muted: #737373;
+    /* Muted Gray */
 
-    /* Accent Colors (Blue) */
+    /* Accent Colors (Electric Blue) */
     --color-accent-primary: #3b82f6;
-    /* Blue 500 */
+    /* Vibrant Blue */
     --color-accent-hover: #2563eb;
-    /* Blue 600 */
-    --color-accent-subtle: rgba(59, 130, 246, 0.1);
-    --color-accent-glow: rgba(59, 130, 246, 0.3);
+    /* Deep Blue */
+    --color-accent-subtle: rgba(59, 130, 246, 0.15);
+    --color-accent-glow: rgba(59, 130, 246, 0.4);
 
     /* Borders */
-    --color-border: rgba(255, 255, 255, 0.08);
-    --color-border-hover: rgba(255, 255, 255, 0.15);
-    --color-border-active: rgba(59, 130, 246, 0.5);
+    --color-border: #333333;
+    /* Visible Dark Border */
+    --color-border-hover: #454545;
+    /* Hover Border */
+    --color-border-active: #3b82f6;
+    /* Accent Border */
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+    --shadow-glow: 0 0 25px rgba(59, 130, 246, 0.2);
 
     /* Glassmorphism */
-    --glass-bg: rgba(15, 23, 42, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --backdrop-blur: blur(12px);
+    --glass-bg: rgba(30, 30, 30, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --backdrop-blur: blur(16px);
 
     /* Legacy Mappings (for compatibility during refactor) */
     --bg: var(--color-bg-base);
