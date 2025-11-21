@@ -22,6 +22,15 @@ Explorer relies on a handful of environment variables. Export them _in the shell
 - `EXPLORER_DATABASE_URL` — optional; override the default `sqlite:///reportgen.db`.
 - `EXPLORER_REPORT_STORAGE_DIR` — optional; persist artifacts somewhere other than `data/reports`.
 - `EXPLORER_DEFAULT_OWNER_EMAIL` — optional; change the fallback owner for CLI runs.
+- `EXPLORER_DISABLE_STORAGE` — optional; when set to `1`/`true`, skip writing reports to the DB and filesystem (useful for local, single-user runs where persistence is unnecessary).
+
+Examples:
+
+```bash
+# Disable persistence for a local dev session
+EXPLORER_DISABLE_STORAGE=1 uvicorn backend.api.app:app --reload --port 8000
+
+```
 
 You can also prefix inline commands:
 
@@ -96,15 +105,3 @@ If you need to wipe the database and generated reports to start fresh:
 ```bash
 python scripts/reset_explorer_state.py
 ```
-
-### Resetting UI state
-
-To reset the UI’s remembered topics and reports, clear the `explorer-saved-topics` and `explorer-saved-reports` keys from your browser’s `localStorage`.
-
-You can do this in Chrome DevTools (Application → Local Storage) or by running this in the console:
-
-```javascript
-localStorage.removeItem("explorer-saved-topics");
-localStorage.removeItem("explorer-saved-reports");
-```
-

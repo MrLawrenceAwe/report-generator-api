@@ -1,6 +1,9 @@
 import asyncio
 import json
+import os
 from functools import lru_cache
+from typing import Optional
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -36,7 +39,9 @@ def get_report_service() -> ReportGeneratorService:
 
 
 @lru_cache
-def get_report_store() -> GeneratedReportStore:
+def get_report_store() -> Optional[GeneratedReportStore]:
+    if os.environ.get("EXPLORER_DISABLE_STORAGE", "").lower() in {"1", "true", "yes", "on"}:
+        return None
     return GeneratedReportStore()
 
 
