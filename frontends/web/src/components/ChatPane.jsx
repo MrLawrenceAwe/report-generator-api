@@ -153,7 +153,6 @@ export function ChatPane({
                                         <pre>{message.content}</pre>
                                     ) : (
                                         <>
-                                            <p>{message.content}</p>
                                             {message.outline && (
                                                 <div className="message__outline">
                                                     <p className="message__outline-title">Outline</p>
@@ -172,6 +171,9 @@ export function ChatPane({
                                                         ))}
                                                     </ol>
                                                 </div>
+                                            )}
+                                            {message.content && (
+                                                <p className="message__status">{message.content}</p>
                                             )}
                                             {message.reportText && (
                                                 <div className="message__download">
