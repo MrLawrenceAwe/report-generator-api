@@ -1,12 +1,42 @@
-import { downloadTextFile } from '../utils/helpers';
+import { useEffect, useRef, useState } from 'react';
+import { copyTextToClipboard, downloadTextFile } from '../utils/helpers';
 
 export function ReportView({ report, onClose }) {
+    const [copyLabel, setCopyLabel] = useState("Copy");
+    const copyResetRef = useRef(null);
+
+    useEffect(
+        () => () => {
+            if (copyResetRef.current) {
+                clearTimeout(copyResetRef.current);
+            }
+        },
+        []
+    );
+
     if (!report) return null;
     const title = (report.title || report.topic || "Explorer Report").trim() || "Explorer Report";
     const topic = (report.topic || title).trim();
+
     const handleDownload = () => {
         if (!report.content) return;
         downloadTextFile(report.content, `${title}.md`);
+    };
+
+    const handleCopy = async () => {
+        if (!report.content) return;
+        if (copyResetRef.current) {
+            clearTimeout(copyResetRef.current);
+        }
+        try {
+            await copyTextToClipboard(report.content);
+            setCopyLabel("Copied");
+        } catch (error) {
+            console.warn("Failed to copy report", error);
+            setCopyLabel("Copy failed");
+        } finally {
+            copyResetRef.current = window.setTimeout(() => setCopyLabel("Copy"), 1800);
+        }
     };
 
     return (
@@ -18,6 +48,11 @@ export function ReportView({ report, onClose }) {
                     {topic && <p className="report-view__subtitle">{topic}</p>}
                 </div>
                 <div className="report-view__actions">
+                    {report.content && (
+                        <button type="button" className="report-view__button" onClick={handleCopy}>
+                            {copyLabel}
+                        </button>
+                    )}
                     {report.content && (
                         <button type="button" className="report-view__button" onClick={handleDownload}>
                             Download
