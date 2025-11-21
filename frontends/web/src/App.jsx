@@ -77,6 +77,10 @@ function App() {
     ].slice(0, MAX_SAVED_REPORTS));
   }, [setSavedReports]);
 
+  const forgetReport = useCallback((id) => {
+    setSavedReports((current) => current.filter((entry) => entry.id !== id));
+  }, []);
+
   const {
     messages,
     isRunning,
@@ -107,6 +111,10 @@ function App() {
     (prompt) => rememberTopics([prompt]),
     [rememberTopics]
   );
+
+  const forgetTopic = useCallback((id) => {
+    setSavedTopics((current) => current.filter((entry) => entry.id !== id));
+  }, []);
 
   const runTopicPrompt = useCallback(
     async (prompt) => {
@@ -383,6 +391,8 @@ function App() {
         savedTopics={savedTopics}
         savedReports={savedReports}
         handleTopicRecall={handleTopicRecall}
+        handleTopicRemove={forgetTopic}
+        handleReportRemove={forgetReport}
         topicViewBarValue={topicViewBarValue}
         setTopicViewBarValue={setTopicViewBarValue}
         handleTopicViewBarSubmit={handleTopicViewBarSubmit}

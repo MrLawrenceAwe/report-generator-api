@@ -5,6 +5,8 @@ export function Sidebar({
     savedTopics,
     savedReports,
     handleTopicRecall,
+    handleTopicRemove,
+    handleReportRemove,
     topicViewBarValue,
     setTopicViewBarValue,
     handleTopicViewBarSubmit,
@@ -69,7 +71,7 @@ export function Sidebar({
                     hasTopics ? (
                         <ul className="sidebar-list" id="sidebar-saved-topics">
                             {savedTopics.map((topic) => (
-                                <li key={topic.id}>
+                                <li key={topic.id} className="sidebar-entry-wrapper">
                                     <button
                                         type="button"
                                         className="sidebar-entry"
@@ -77,6 +79,17 @@ export function Sidebar({
                                     >
                                         <span className="sidebar-entry__eyebrow">Topic</span>
                                         <span className="sidebar-entry__title">{topic.prompt}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="sidebar-entry__delete-icon"
+                                        aria-label={`Delete saved topic ${topic.prompt}`}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleTopicRemove?.(topic.id);
+                                        }}
+                                    >
+                                        ×
                                     </button>
                                 </li>
                             ))}
@@ -109,7 +122,7 @@ export function Sidebar({
                     hasReports ? (
                         <ul className="sidebar-list" id="sidebar-saved-reports">
                             {savedReports.map((report) => (
-                                <li key={report.id}>
+                                <li key={report.id} className="sidebar-entry-wrapper">
                                     <button
                                         type="button"
                                         className="sidebar-entry sidebar-entry--report"
@@ -118,6 +131,17 @@ export function Sidebar({
                                     >
                                         <span className="sidebar-entry__eyebrow">Report</span>
                                         <span className="sidebar-entry__title">{report.topic}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="sidebar-entry__delete-icon"
+                                        aria-label={`Delete report ${report.title || report.topic}`}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleReportRemove?.(report.id);
+                                        }}
+                                    >
+                                        ×
                                     </button>
                                 </li>
                             ))}
