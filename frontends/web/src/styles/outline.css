@@ -1,259 +1,324 @@
 .outline-composer {
-    margin-top: 32px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 32px;
-    padding: 24px;
+    margin-top: var(--space-8);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6);
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    background: rgba(255, 255, 255, 0.02);
-    max-width: 780px;
+    gap: var(--space-6);
+    background: var(--color-bg-surface);
+    max-width: 800px;
     width: 100%;
     margin-left: auto;
     margin-right: auto;
+    box-shadow: var(--shadow-md);
 }
 
 .outline-composer--pending {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--color-accent-subtle);
+    box-shadow: var(--shadow-glow);
 }
 
 .outline-composer__field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: var(--muted);
+    gap: var(--space-3);
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
 }
 
 .outline-composer__eyebrow {
     font-size: 0.8rem;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--muted-strong);
+    color: var(--color-text-tertiary);
+    font-weight: 600;
 }
 
 .outline-composer__field input {
-    border: 1px solid var(--panel-border-strong);
-    border-radius: 18px;
-    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
     font: inherit;
-    color: inherit;
-    background: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-primary);
+    background: var(--color-bg-base);
+    transition: all var(--transition-fast);
+}
+
+.outline-composer__field input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 
 .outline-format-toggle {
     display: inline-flex;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 999px;
-    padding: 3px;
+    gap: var(--space-1);
+    background: var(--color-bg-base);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    padding: 4px;
     width: fit-content;
 }
 
 .outline-format-toggle__option {
     border: none;
     background: transparent;
-    color: var(--muted);
+    color: var(--color-text-muted);
     padding: 6px 16px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.25s ease, color 0.25s ease;
+    transition: all var(--transition-fast);
+    font-size: 0.85rem;
+}
+
+.outline-format-toggle__option:hover {
+    color: var(--color-text-secondary);
 }
 
 .outline-format-toggle__option--active {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    background: var(--color-bg-highlight);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .outline-lines {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--space-4);
 }
 
 .outline-help {
     margin: 0;
-    font-size: 0.88rem;
-    color: var(--muted);
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
 }
 
 .outline-section-list {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: var(--space-4);
 }
 
 .outline-section {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 18px;
-    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-4);
+    background: var(--color-bg-base);
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--space-3);
+    transition: border-color var(--transition-fast);
+}
+
+.outline-section:hover {
+    border-color: var(--color-text-muted);
 }
 
 .outline-section__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .outline-section__meta {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .outline-section__badge {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
     display: grid;
     place-items: center;
     font-weight: 600;
     font-size: 0.9rem;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--muted-strong);
+    background: var(--color-bg-highlight);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
 }
 
 .outline-section__meta input {
     flex: 1;
-    border: 1px solid var(--panel-border-strong);
-    border-radius: 16px;
-    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
     font-family: inherit;
-    font-size: 0.95rem;
-    font-weight: 400;
-    background: rgba(255, 255, 255, 0.02);
-    color: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast);
+}
+
+.outline-section__meta input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
 }
 
 .outline-section__remove,
 .outline-subsection button,
 .outline-add-button {
     border: none;
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-weight: 500;
+    border-radius: var(--radius-full);
+    padding: var(--space-2) var(--space-4);
+    font-weight: 600;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--muted-strong);
-    transition: background 0.2s ease, color 0.2s ease;
+    background: var(--color-bg-highlight);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+    font-size: 0.85rem;
 }
 
 .outline-section__remove:hover,
 .outline-subsection button:hover,
 .outline-add-button:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sm);
 }
 
 .outline-subsection-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-2);
+    padding-left: 44px;
+    /* Align with input */
 }
 
 .outline-subsection {
     display: flex;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: center;
 }
 
 .outline-subsection__badge {
-    width: 52px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    width: 40px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
     text-align: center;
-    padding: 10px 0;
+    padding: var(--space-2) 0;
     font-size: 0.8rem;
-    color: var(--muted);
+    color: var(--color-text-muted);
+    background: var(--color-bg-surface);
 }
 
 .outline-subsection input {
     flex: 1;
-    border: 1px solid var(--panel-border-strong);
-    border-radius: 16px;
-    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 400;
-    background: rgba(255, 255, 255, 0.02);
-    color: inherit;
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast);
+}
+
+.outline-subsection input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
 }
 
 .outline-subsection button {
-    padding: 0 14px;
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
+    display: grid;
+    place-items: center;
 }
 
 .outline-add-button {
     align-self: flex-start;
+    margin-left: 44px;
 }
 
 .outline-add-button--section {
     align-self: flex-end;
+    margin-left: 0;
+    background: var(--color-accent-primary);
+    color: #ffffff;
+}
+
+.outline-add-button--section:hover {
+    background: var(--color-accent-hover);
+    color: #ffffff;
 }
 
 .outline-json-block {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-4);
 }
 
 .outline-builder__actions {
     display: flex;
     justify-content: space-between;
-    gap: 14px;
+    gap: var(--space-4);
     align-items: center;
-}
-
-.outline-builder__actions .outline-add-button--section {
-    margin-left: 0;
+    margin-top: var(--space-4);
 }
 
 .outline-json-input {
     width: 100%;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.02);
-    color: inherit;
-    font: 0.95rem/1.6 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-    padding: 16px;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font: 0.9rem/1.6 var(--font-mono);
+    padding: var(--space-4);
     resize: vertical;
+    min-height: 200px;
+}
+
+.outline-json-input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 
 .outline-error {
     margin: 0;
-    font-size: 0.88rem;
-    color: #ff9d9d;
+    font-size: 0.9rem;
+    color: #ef4444;
+    font-weight: 500;
 }
 
 .outline-error--inline {
-    color: #ffd38a;
+    color: #f59e0b;
 }
 
 .outline-submit {
     align-self: flex-end;
     border: none;
-    border-radius: 28px;
-    padding: 12px 26px;
-    font-weight: 500;
-    background: var(--accent-glow);
-    color: #050505;
+    border-radius: var(--radius-full);
+    padding: var(--space-3) var(--space-6);
+    font-weight: 600;
+    background: var(--color-accent-primary);
+    color: #ffffff;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-md);
 }
 
 .outline-submit:disabled {
-    opacity: 0.45;
+    opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
+}
+
+.outline-submit:not(:disabled):hover {
+    background: var(--color-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
 }
 
 @media (max-width: 640px) {
@@ -277,6 +342,14 @@
         align-items: stretch;
     }
 
+    .outline-subsection-list {
+        padding-left: 0;
+    }
+
+    .outline-add-button {
+        margin-left: 0;
+    }
+
     .outline-subsection button {
         width: 100%;
         height: 40px;
@@ -289,101 +362,5 @@
 
     .outline-submit {
         width: 100%;
-    }
-}
-
-@media (prefers-color-scheme: light) {
-    .outline-composer {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    }
-
-    .outline-composer__field input {
-        background: #f8fafc;
-        border-color: #e2e8f0;
-        color: #1e293b;
-    }
-
-    .outline-composer__field input:focus {
-        background: #ffffff;
-        border-color: #94a3b8;
-        outline: 2px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .outline-format-toggle {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-    }
-
-    .outline-format-toggle__option {
-        color: #64748b;
-    }
-
-    .outline-format-toggle__option--active {
-        background: #ffffff;
-        color: #0f172a;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
-    }
-
-    .outline-section {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-    }
-
-    .outline-section__badge {
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #e2e8f0;
-    }
-
-    .outline-section__meta input {
-        background: #ffffff;
-        border-color: #e2e8f0;
-        color: #1e293b;
-    }
-
-    .outline-section__remove,
-    .outline-subsection button,
-    .outline-add-button {
-        background: #f1f5f9;
-        border: 1px solid transparent;
-        color: #64748b;
-    }
-
-    .outline-section__remove:hover,
-    .outline-subsection button:hover,
-    .outline-add-button:hover {
-        background: #e2e8f0;
-        color: #1e293b;
-    }
-
-    .outline-subsection__badge {
-        border: 1px solid #e2e8f0;
-        color: #64748b;
-        background: #f8fafc;
-    }
-
-    .outline-subsection input {
-        background: #ffffff;
-        border-color: #e2e8f0;
-        color: #1e293b;
-    }
-
-    .outline-json-input {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        color: #1e293b;
-    }
-
-    .outline-json-input:focus {
-        background: #ffffff;
-        border-color: #94a3b8;
-        outline: none;
-    }
-
-    .outline-submit {
-        color: #ffffff;
     }
 }

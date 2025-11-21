@@ -15,8 +15,8 @@ export function ModelSettings({
     onSuggestionModelChange,
 }) {
     return (
-        <section className="sidebar-section model-settings">
-            <div className="sidebar-section__header">
+        <section className="model-settings">
+            <div className="model-settings__group-header">
                 <h2>Models</h2>
                 <p>Choose your suggestions engine and per-stage presets for reports.</p>
             </div>
