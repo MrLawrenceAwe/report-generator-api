@@ -105,7 +105,6 @@ def test_report_generator_stream_produces_complete_report():
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
                 "translator": {"model": "translator-model"},
-                "cleanup": {"model": "cleanup-model"},
             },
             "return": "report_with_outline",
         }
@@ -162,7 +161,6 @@ def test_report_generator_translation_failure_emits_error_event():
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
                 "translator": {"model": "translator-model"},
-                "cleanup": {"model": "translator-model"},
             },
         }
     )
@@ -192,60 +190,6 @@ def test_report_generator_translation_failure_emits_error_event():
     assert len(stub_text_client.calls) == 2
 
 
-def test_report_generator_ignores_unused_cleanup_responses():
-    outline = Outline(
-        report_title="Insights",
-        sections=[Section(title="Background", subsections=["Overview"])],
-    )
-    stub_text_client = StubTextClient(
-        [
-            "### Overview\nWriter body",
-            "### Overview\nTranslated body",
-            RuntimeError("cleanup boom"),
-        ]
-    )
-    service = ReportGeneratorService(
-        outline_service=DummyOutlineService(),
-        text_client=stub_text_client,
-        report_store=NoopReportStore(),
-    )
-    request = GenerateRequest.model_validate(
-        {
-            "outline": outline.model_dump(),
-            "models": {
-                "outline": {"model": "outline-model"},
-                "writer": {"model": "writer-model"},
-                "translator": {"model": "translator-model"},
-                "cleanup": {"model": "cleanup-model"},
-            },
-        }
-    )
-
-    events = []
-
-    async def collect_events():
-        async for event in service.stream_report(request):
-            events.append(event)
-
-    asyncio.run(collect_events())
-
-    statuses = [event["status"] for event in events]
-    assert statuses == [
-        "started",
-        "using_provided_outline",
-        "persistence_ready",
-        "begin_sections",
-        "writing_section",
-        "translating_section",
-        "section_complete",
-        "complete",
-    ]
-    assert len(stub_text_client.calls) == 2
-    assert stub_text_client._responses and isinstance(
-        stub_text_client._responses[0], RuntimeError
-    )
-
-
 def test_report_generator_runs_translation_even_when_models_match():
     outline = Outline(
         report_title="Insights",
@@ -255,7 +199,6 @@ def test_report_generator_runs_translation_even_when_models_match():
         [
             "### Overview\nWriter body",
             "### Overview\nTranslated body",
-            "### Overview\nClean body",
         ]
     )
     service = ReportGeneratorService(
@@ -270,7 +213,6 @@ def test_report_generator_runs_translation_even_when_models_match():
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
                 "translator": {"model": "translator-model"},
-                "cleanup": {"model": "translator-model"},
             },
         }
     )
@@ -320,7 +262,6 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
                 "translator": {"model": "translator-model"},
-                "cleanup": {"model": "cleanup-model"},
             },
             "return": "report_with_outline",
         }
@@ -436,7 +377,6 @@ def test_report_generator_streams_with_live_openai():
                 "outline": {"model": live_model},
                 "writer": {"model": live_model},
                 "translator": {"model": live_model},
-                "cleanup": {"model": live_model},
             },
             "return": "report_with_outline",
         }

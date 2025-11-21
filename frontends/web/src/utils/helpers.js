@@ -46,17 +46,17 @@ export const MODEL_PRESET_LABELS = {
 };
 
 export const MODEL_OPTIONS = [
-    { value: "gpt-4o-mini", label: "gpt-4o-mini (fast)" },
-    { value: "gpt-4.1-nano", label: "gpt-4.1-nano" },
+    { value: "gpt-4.1-nano", label: "gpt-4.1-nano (fast)" },
+    { value: "gpt-4o-mini", label: "gpt-4o-mini" },
     { value: "gpt-4o", label: "gpt-4o (slower, better)" },
     { value: "gpt-5-nano", label: "gpt-5-nano" },
 ];
-export const DEFAULT_SUGGESTION_MODEL = "gpt-4o-mini";
+export const DEFAULT_SUGGESTION_MODEL = "gpt-4.1-nano";
 
 export const DEFAULT_STAGE_MODELS = {
-    outline: "gpt-4o-mini",
-    writer: "gpt-4o-mini",
-    translator: "gpt-4o-mini",
+    outline: "gpt-4.1-nano",
+    writer: "gpt-4.1-nano",
+    translator: "gpt-4.1-nano",
 };
 
 export const DEFAULT_MODEL_PRESETS = {

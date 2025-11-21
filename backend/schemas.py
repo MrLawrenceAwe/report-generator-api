@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 ReasoningEffort = Literal["minimal", "low", "medium", "high"]
 
-DEFAULT_TEXT_MODEL = "gpt-4o-mini"
+DEFAULT_TEXT_MODEL = "gpt-4.1-nano"
 
 
 class ModelSpec(BaseModel):
@@ -98,7 +98,6 @@ class GenerateRequest(SubjectFilters):
             "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
             "writer": ModelSpec(model=DEFAULT_TEXT_MODEL),
             "translator": ModelSpec(model=DEFAULT_TEXT_MODEL),
-            "cleanup": ModelSpec(model="gpt-5-nano"),
         }
     )
     writer_fallback: Optional[str] = None

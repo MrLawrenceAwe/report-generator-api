@@ -117,22 +117,3 @@ Never add translator prefaces such as "Sure, here's the translation", "As an AI"
 Section body to translate:
 {section_body}
 """
-
-
-def build_translation_cleanup_prompt(
-    report_title: str,
-    section_title: str,
-    translated_text: str,
-) -> str:
-    narration = translated_text.strip() or "(no narration)"
-    return f"""
-You polish narrated report sections. Remove any meta commentary, translator disclaimers, filler like "Sure, here is" or "Translating now", and any content outside the narration itself. Preserve every heading exactly as provided (e.g., `1.1: ...`) and keep the factual narration untouched.
-
-Return only the cleaned narration, starting with the first heading. If the text already complies, return it unchanged.
-
-Report: "{report_title}"
-Section: "{section_title}"
-
-Narration to clean:
-{narration}
-"""
