@@ -55,6 +55,7 @@
     gap: var(--space-2);
     opacity: 0;
     animation: message-enter var(--transition-normal) forwards;
+    width: 100%;
 }
 
 @keyframes message-enter {
@@ -70,35 +71,48 @@
 }
 
 .message--user {
-    align-items: flex-end;
+    align-items: flex-start;
+    /* Align left like a document */
+}
+
+.message__header {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--color-text-tertiary);
+    margin-bottom: var(--space-1);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
 }
 
 .message__bubble {
-    max-width: 90%;
-    padding: var(--space-4) var(--space-5);
-    border-radius: var(--radius-2xl);
+    width: 100%;
+    max-width: 100%;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
     line-height: 1.6;
     font-size: 1rem;
     white-space: pre-wrap;
     position: relative;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
 }
 
-/* Assistant Bubble */
+/* Assistant Block */
 .message:not(.message--user) .message__bubble {
     background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
+    border-color: var(--color-border);
     color: var(--color-text-primary);
-    border-bottom-left-radius: var(--radius-sm);
 }
 
-/* User Bubble */
+/* User Block */
 .message--user .message__bubble {
-    background: var(--color-accent-primary);
-    color: #ffffff;
-    /* Always white for contrast on accent */
-    border-bottom-right-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
+    background: var(--color-bg-highlight);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
+    /* No accent background */
+    box-shadow: none;
 }
 
 .message__bubble pre {

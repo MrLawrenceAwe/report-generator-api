@@ -145,6 +145,9 @@ export function ChatPane({
                     <ol className="message-list">
                         {messages.map((message) => (
                             <li key={message.id} className={`message message--${message.role}`}>
+                                <div className="message__header">
+                                    {message.role === 'user' ? 'REQUEST' : 'REPORT'}
+                                </div>
                                 <div className="message__bubble">
                                     {message.variant === "outline" ? (
                                         <pre>{message.content}</pre>
