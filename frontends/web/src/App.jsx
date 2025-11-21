@@ -17,7 +17,6 @@ import {
   SAVED_REPORTS_KEY,
   MAX_SAVED_TOPICS,
   MAX_SAVED_REPORTS,
-  MODE_TABS,
   summarizeReport,
   MODEL_PRESET_LABELS,
 } from './utils/helpers';
@@ -364,27 +363,7 @@ function App() {
   }
   const chatPaneClassName = chatPaneClasses.join(" ");
 
-  const renderModeToggle = (extraClass = "") => (
-    <div
-      className={`mode-toggle${extraClass ? ` ${extraClass}` : ""}`}
-      role="tablist"
-      aria-label="Prompt type"
-    >
-      {MODE_TABS.map((tab) => (
-        <button
-          key={tab.value}
-          type="button"
-          role="tab"
-          aria-selected={mode === tab.value}
-          className={`mode-toggle__option${mode === tab.value ? " mode-toggle__option--active" : ""
-            }`}
-          onClick={() => !isRunning && setMode(tab.value)}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
+
 
   return (
     <div className="page">
@@ -467,9 +446,11 @@ function App() {
             onClose={handleReportClose}
           />
         ) : (
+
           <ChatPane
             messages={messages}
             mode={mode}
+            setMode={setMode}
             isRunning={isRunning}
             onReset={() => {
               closeTopicView();
@@ -481,7 +462,6 @@ function App() {
             setComposerValue={setComposerValue}
             handleTopicSubmit={handleTopicSubmit}
             handleStop={stopGeneration}
-            renderModeToggle={renderModeToggle}
             composerButtonLabel={composerButtonLabel}
             sectionCount={sectionCount}
             setSectionCount={setSectionCount}

@@ -1,5 +1,5 @@
 import { SectionCountSelector } from './SectionCountSelector';
-import { ModelOverrideToggle } from './ChatPane';
+import { ModelOverrideToggle } from './ModelOverrideToggle';
 
 export function TopicView({
     topic,
