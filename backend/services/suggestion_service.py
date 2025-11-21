@@ -126,7 +126,7 @@ class SuggestionService:
         )
         return (
             "You suggest concise, meaningful topics related to the provided seeds. "
-            "Return strictly valid JSON. Use natural capitalization"
+            "Return strictly valid JSON. Use Title Case."
             f"\n\nSeeds:\n{seeds_block}\n"
             "\nOutput JSON schema:\n"
             "{\n"
@@ -221,7 +221,7 @@ class SuggestionService:
         return (
             "You are a topic suggestion engine. Always return concise, concrete topics "
             "related to the provided seeds. Focus on usefulness over cleverness. "
-            "Preserve natural capitalization"
+            "Use Title Case."
         )
 
     @staticmethod
