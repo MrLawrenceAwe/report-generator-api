@@ -3,6 +3,7 @@ TODO.md
 cli/generated_reports/
 .DS_Store
 __pycache__/
+scripts/dev.sh
 terminal_command_cheat_sheet.txt
 reportgen.db
 .vscode/settings.json
