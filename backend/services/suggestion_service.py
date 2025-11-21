@@ -126,7 +126,7 @@ class SuggestionService:
         )
         return (
             "You suggest concise, meaningful topics related to the provided seeds. "
-            "Return strictly valid JSON."
+            "Return strictly valid JSON. Use natural capitalization (handle possessives like “aviation's” without introducing stray uppercase letters)."
             f"\n\nSeeds:\n{seeds_block}\n"
             "\nOutput JSON schema:\n"
             "{\n"
@@ -166,9 +166,10 @@ class SuggestionService:
         seen = set()
         for candidate in candidates:
             normalized = self._normalize_title(candidate.title)
-            if not normalized or normalized in seen:
+            key = normalized.casefold()
+            if not normalized or key in seen:
                 continue
-            seen.add(normalized)
+            seen.add(key)
             deduped.append(
                 _SuggestionCandidate(
                     title=normalized,
@@ -185,9 +186,10 @@ class SuggestionService:
         normalized: List[str] = []
         for value in values:
             cleaned = SuggestionService._normalize_title(value)
-            if not cleaned or cleaned in seen:
+            key = cleaned.casefold()
+            if not cleaned or key in seen:
                 continue
-            seen.add(cleaned)
+            seen.add(key)
             normalized.append(cleaned)
         return normalized
 
@@ -196,9 +198,7 @@ class SuggestionService:
         if not isinstance(value, str):
             return ""
         stripped = " ".join(value.split())
-        if not stripped:
-            return ""
-        return stripped.title()
+        return stripped
 
     @staticmethod
     def _extract_title(entry: object) -> Optional[str]:
@@ -220,7 +220,8 @@ class SuggestionService:
     def _system_prompt() -> str:
         return (
             "You are a topic suggestion engine. Always return concise, concrete topics "
-            "related to the provided seeds. Focus on usefulness over cleverness."
+            "related to the provided seeds. Focus on usefulness over cleverness. "
+            "Preserve natural capitalization; avoid auto-title-casing that breaks apostrophes or acronyms."
         )
 
     @staticmethod
