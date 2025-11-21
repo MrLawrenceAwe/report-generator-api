@@ -12,6 +12,7 @@ export function Sidebar({
     handleTopicViewBarSubmit,
     onOpenSettings,
     onReportSelect,
+    onResetExplore,
 }) {
     const [topicsCollapsed, setTopicsCollapsed] = useState(false);
     const [reportsCollapsed, setReportsCollapsed] = useState(false);
@@ -20,12 +21,17 @@ export function Sidebar({
 
     return (
         <aside className="sidebar" aria-label="Saved prompts and generated reports">
-            <div className="sidebar__brand">
+            <button
+                type="button"
+                className="sidebar__brand"
+                onClick={onResetExplore}
+                aria-label="Back to home"
+            >
                 <div className="sidebar__logo">Ex</div>
                 <div>
                     <div className="sidebar__title">Explorer</div>
                 </div>
-            </div>
+            </button>
             <button type="button" className="sidebar__settings-button" onClick={onOpenSettings}>
                 Settings
             </button>

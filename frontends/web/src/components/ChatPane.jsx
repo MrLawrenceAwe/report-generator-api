@@ -97,6 +97,7 @@ export function ChatPane({
     messages,
     mode,
     isRunning,
+    onReset,
     composerValue,
     setComposerValue,
     handleTopicSubmit,
@@ -142,6 +143,16 @@ export function ChatPane({
         <>
             {hasMessages && (
                 <section className="chat-pane__body" aria-live="polite">
+                    <div className="chat-pane__back-row">
+                        <button
+                            type="button"
+                            className="chat-pane__back"
+                            onClick={onReset}
+                            aria-label="Back to Home"
+                        >
+                            ← Home
+                        </button>
+                    </div>
                     <ol className="message-list">
                         {messages.map((message) => (
                             <li key={message.id} className={`message message--${message.role}`}>

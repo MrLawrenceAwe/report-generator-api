@@ -84,6 +84,7 @@ function App() {
   const {
     messages,
     isRunning,
+    setMessages,
     setIsRunning,
     runReportFlow,
     appendMessage,
@@ -398,6 +399,12 @@ function App() {
         handleTopicViewBarSubmit={handleTopicViewBarSubmit}
         onOpenSettings={handleOpenSettings}
         onReportSelect={handleReportOpen}
+        onResetExplore={() => {
+          closeTopicView();
+          setActiveReport(null);
+          setMessages([]);
+          setMode("topic");
+        }}
       />
       <main className={chatPaneClassName}>
         {shouldShowExplore && (
@@ -464,6 +471,12 @@ function App() {
             messages={messages}
             mode={mode}
             isRunning={isRunning}
+            onReset={() => {
+              closeTopicView();
+              setActiveReport(null);
+              setMessages([]);
+              setMode("topic");
+            }}
             composerValue={composerValue}
             setComposerValue={setComposerValue}
             handleTopicSubmit={handleTopicSubmit}
