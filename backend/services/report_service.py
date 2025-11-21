@@ -39,7 +39,8 @@ class ReportGeneratorService:
         self.outline_service = outline_service or OutlineService(
             text_client=self.text_client
         )
-        self.report_store = report_store or GeneratedReportStore()
+        # Respect explicit None to allow storage to be disabled via dependency wiring.
+        self.report_store = report_store
 
     async def stream_report(
         self, generate_request: GenerateRequest

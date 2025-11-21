@@ -21,7 +21,7 @@
 }
 
 .chat-pane--topic-view {
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     overflow-y: auto;
 }
@@ -123,6 +123,12 @@
     white-space: pre-wrap;
 }
 
+.message__status-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
 .message__status {
     margin: 0;
 }
@@ -140,7 +146,11 @@
     margin-top: 0;
 }
 
-.message__outline + .message__status {
+.message__status-block + .message__outline {
+    margin-top: var(--space-3);
+}
+
+.message__outline + .message__status-block {
     margin-top: var(--space-3);
 }
 

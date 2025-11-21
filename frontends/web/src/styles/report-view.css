@@ -1,5 +1,6 @@
 .report-view {
     width: min(800px, 100%);
+    max-height: calc(100vh - 80px);
     margin: 0 auto;
     padding: clamp(var(--space-6), 5vw, var(--space-10));
     border-radius: var(--radius-2xl);
@@ -10,6 +11,7 @@
     flex-direction: column;
     gap: var(--space-6);
     box-shadow: var(--shadow-lg);
+    overflow: auto;
 }
 
 .report-view__header {

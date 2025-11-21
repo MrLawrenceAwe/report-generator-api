@@ -114,6 +114,7 @@ export function useChat(apiBase, rememberReport) {
                                 statusLog.push(statusText);
                                 updateMessage(assistantId, {
                                     content: statusLog.join("\n"),
+                                    statusLog: [...statusLog],
                                     outline: event.outline || finalOutline || null,
                                 });
                             }
@@ -137,6 +138,7 @@ export function useChat(apiBase, rememberReport) {
                 const resolvedTopic = summaryLabel || resolvedTitle;
                 updateMessage(assistantId, (message) => ({
                     content: statusLog.length ? statusLog.join("\n") : (message.content || resolvedText),
+                    statusLog: statusLog.length ? [...statusLog] : message.statusLog || [],
                     reportText: finalText || null,
                     reportTitle: resolvedTitle,
                     reportTopic: message.reportTopic || resolvedTopic,
@@ -151,10 +153,12 @@ export function useChat(apiBase, rememberReport) {
                 if (isAbort) {
                     updateMessage(assistantId, (message) => ({
                         content: message.content || "Generation cancelled.",
+                        statusLog: message.statusLog || [],
                     }));
                 } else {
                     updateMessage(assistantId, {
                         content: `Something went wrong: ${error.message}`,
+                        statusLog: statusLog.length ? [...statusLog] : [],
                     });
                 }
                 return false;

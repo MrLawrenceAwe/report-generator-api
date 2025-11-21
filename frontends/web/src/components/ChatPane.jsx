@@ -151,30 +151,62 @@ export function ChatPane({
                                 <div className="message__bubble">
                                     {message.variant === "outline" ? (
                                         <pre>{message.content}</pre>
+                                    ) : message.role === "user" ? (
+                                        <p>{message.content}</p>
                                     ) : (
                                         <>
-                                            {message.outline && (
-                                                <div className="message__outline">
-                                                    <p className="message__outline-title">Outline</p>
-                                                    <ol>
-                                                        {message.outline.sections?.map((section) => (
-                                                            <li key={section.title}>
-                                                                <strong>{section.title}</strong>
-                                                                {!!section.subsections?.length && (
-                                                                    <ul>
-                                                                        {section.subsections.map((sub) => (
-                                                                            <li key={`${section.title}-${sub}`}>{sub}</li>
-                                                                        ))}
-                                                                    </ul>
-                                                                )}
-                                                            </li>
-                                                        ))}
-                                                    </ol>
-                                                </div>
-                                            )}
-                                            {message.content && (
-                                                <p className="message__status">{message.content}</p>
-                                            )}
+                                            {(() => {
+                                                const statusLines = Array.isArray(message.statusLog) && message.statusLog.length
+                                                    ? message.statusLog
+                                                    : (message.content || "").split("\n").map((line) => line.trim()).filter(Boolean);
+                                                const outlineReadyIndex = statusLines.findIndex((line) =>
+                                                    line.toLowerCase().startsWith("outline ready")
+                                                );
+                                                const hasOutlineReady = outlineReadyIndex >= 0;
+                                                const preStatus = hasOutlineReady
+                                                    ? statusLines.slice(0, outlineReadyIndex + 1)
+                                                    : statusLines;
+                                                const postStatus = hasOutlineReady
+                                                    ? statusLines.slice(outlineReadyIndex + 1)
+                                                    : [];
+
+                                                const renderStatusBlock = (lines, blockKey) =>
+                                                    lines.length ? (
+                                                        <div className="message__status-block" key={`${message.id}-${blockKey}`}>
+                                                            {lines.map((line, index) => (
+                                                                <p className="message__status" key={`${message.id}-${blockKey}-${index}`}>
+                                                                    {line}
+                                                                </p>
+                                                            ))}
+                                                        </div>
+                                                    ) : null;
+
+                                                return (
+                                                    <>
+                                                        {renderStatusBlock(preStatus, "pre")}
+                                                        {message.outline && (
+                                                            <div className="message__outline">
+                                                                <p className="message__outline-title">Outline</p>
+                                                                <ol>
+                                                                    {message.outline.sections?.map((section) => (
+                                                                        <li key={section.title}>
+                                                                            <strong>{section.title}</strong>
+                                                                            {!!section.subsections?.length && (
+                                                                                <ul>
+                                                                                    {section.subsections.map((sub) => (
+                                                                                        <li key={`${section.title}-${sub}`}>{sub}</li>
+                                                                                    ))}
+                                                                                </ul>
+                                                                            )}
+                                                                        </li>
+                                                                    ))}
+                                                                </ol>
+                                                            </div>
+                                                        )}
+                                                        {renderStatusBlock(postStatus, "post")}
+                                                    </>
+                                                );
+                                            })()}
                                             {message.reportText && (
                                                 <div className="message__download">
                                                     {onViewReport && (
