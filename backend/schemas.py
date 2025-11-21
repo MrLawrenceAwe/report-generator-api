@@ -97,7 +97,7 @@ class GenerateRequest(SubjectFilters):
         default_factory=lambda: {
             "outline": ModelSpec(model=DEFAULT_TEXT_MODEL),
             "writer": ModelSpec(model=DEFAULT_TEXT_MODEL),
-            "translator": ModelSpec(model=DEFAULT_TEXT_MODEL),
+            "editor": ModelSpec(model=DEFAULT_TEXT_MODEL),
         }
     )
     writer_fallback: Optional[str] = None

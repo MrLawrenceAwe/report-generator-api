@@ -83,7 +83,7 @@ python -m cli.stream_report --payload-file path/to/your_outline_payload.json --s
 python -m cli.stream_report --payload-file path/to/your_models_payload.json --show-progress
 ```
 
-- Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → translator). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
+- Edit the `models` block in the JSON file to target specific OpenAI models (outline → writer → editor). Include `reasoning_effort` when using reasoning-capable models (names starting with `gpt-5`, `o3`, or `o4`).
 - Fields you omit fall back to the backend defaults.
 
 ### Capture the raw NDJSON stream

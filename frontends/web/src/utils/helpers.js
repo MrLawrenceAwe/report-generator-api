@@ -31,9 +31,9 @@ export const MODEL_STAGES = [
         description: "Writes each section.",
     },
     {
-        key: "translator",
-        label: "Translator",
-        description: "Turns prose into narration suitable for audio format.",
+        key: "editor",
+        label: "Editor",
+        description: "Edits prose into narration suitable for audio format.",
     },
 ];
 
@@ -56,7 +56,7 @@ export const DEFAULT_SUGGESTION_MODEL = "gpt-4.1-nano";
 export const DEFAULT_STAGE_MODELS = {
     outline: "gpt-4.1-nano",
     writer: "gpt-4.1-nano",
-    translator: "gpt-4.1-nano",
+    editor: "gpt-4.1-nano",
 };
 
 export const DEFAULT_MODEL_PRESETS = {
@@ -67,13 +67,13 @@ export const DEFAULT_MODEL_PRESETS = {
         ...DEFAULT_STAGE_MODELS,
         outline: "gpt-4o",
         writer: "gpt-4o",
-        translator: "gpt-4o",
+        editor: "gpt-4o",
     },
     slowest: {
         ...DEFAULT_STAGE_MODELS,
         outline: "gpt-4o",
         writer: "gpt-4o",
-        translator: "gpt-4o",
+        editor: "gpt-4o",
     },
 };
 

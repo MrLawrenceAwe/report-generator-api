@@ -20,7 +20,7 @@ from backend.utils.model_utils import maybe_add_reasoning
 from backend.utils.openai_client import OpenAITextClient, get_default_text_client
 from .outline_service import OutlineParsingError, OutlineService
 from backend.utils.prompts import (
-    build_section_translator_prompt,
+    build_section_editor_prompt,
     build_section_writer_prompt,
 )
 from .report_state import NumberedSection, WrittenSection, WriterState
@@ -93,7 +93,11 @@ class _ReportStreamRunner:
         models = self.request.models
         self.outline_spec = models.get("outline", ModelSpec(model=DEFAULT_TEXT_MODEL))
         self.writer_spec = models.get("writer", ModelSpec(model=DEFAULT_TEXT_MODEL))
-        self.translator_spec = models.get("translator", ModelSpec(model=DEFAULT_TEXT_MODEL))
+        self.editor_spec = (
+            models.get("editor")
+            or models.get("translator")
+            or ModelSpec(model=DEFAULT_TEXT_MODEL)
+        )
         self.writer_state = WriterState.build(
             self.writer_spec,
             (
@@ -293,11 +297,11 @@ class _ReportStreamRunner:
         section_text = enforce_subsection_headings(section_text, subsection_titles)
 
         async for status in self._emit_status_payload(
-            {"status": "translating_section", "section": section_title}
+            {"status": "editing_section", "section": section_title}
         ):
             yield status
         try:
-            narrated = await self._translate_section(
+            narrated = await self._edit_section(
                 outline.report_title,
                 section_title,
                 section_text,
@@ -308,7 +312,7 @@ class _ReportStreamRunner:
             ):
                 raise
             async for status in self._emit_stage_error(
-                section_title, "translate", exception
+                section_title, "edit", exception
             ):
                 yield status
             return
@@ -346,13 +350,13 @@ class _ReportStreamRunner:
             "status": "begin_sections",
             "count": len(outline.sections),
             "writer_model": self.writer_spec.model,
-            "translator_model": self.translator_spec.model,
+            "editor_model": self.editor_spec.model,
         }
         if self.writer_state.fallback:
             begin_status["writer_fallback_model"] = self.writer_state.fallback.model
         maybe_add_reasoning(begin_status, "writer_reasoning_effort", self.writer_spec)
         maybe_add_reasoning(
-            begin_status, "translator_reasoning_effort", self.translator_spec
+            begin_status, "editor_reasoning_effort", self.editor_spec
         )
         return begin_status
 
@@ -457,20 +461,20 @@ class _ReportStreamRunner:
         async for status in self._emit_status_payload(payload):
             yield status
 
-    async def _translate_section(
+    async def _edit_section(
         self,
         report_title: str,
         section_title: str,
         section_text: str,
     ) -> str:
-        translator_system = "You translate prose into clear, audio-friendly narration without losing information."
-        translator_prompt = build_section_translator_prompt(
+        editor_system = "You edit prose into clear, audio-friendly narration without losing information."
+        editor_prompt = build_section_editor_prompt(
             report_title,
             section_title,
             section_text,
         )
         return await self.service.text_client.call_text_async(
-            self.translator_spec,
-            translator_system,
-            translator_prompt,
+            self.editor_spec,
+            editor_system,
+            editor_prompt,
         )

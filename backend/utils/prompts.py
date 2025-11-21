@@ -103,17 +103,17 @@ Instructions:
 """
 
 
-def build_section_translator_prompt(
+def build_section_editor_prompt(
     report_title: str, section_title: str, section_text: str
 ) -> str:
     section_body = section_text.strip() or "(no body text)"
     return f"""
-Translate the following section body from the report "{report_title}" into an audio-friendly narration while preserving every fact.
+Edit the following section body from the report "{report_title}" into an audio-friendly narration while preserving every fact.
 Keep every heading line exactly as written (they already contain numbering like `1.1: ...`); do not add Markdown `#` symbols, change the numbering, or repeat the section title "{section_title}".
 Rewrite only the paragraph text beneath those headings using a conversational tone.
 Where appropriate, enrich the narration with short, clarifying examples.
-Never add translator prefaces such as "Sure, here's the translation", "As an AI", "Here you go", or meta commentary; begin directly with the first heading and narration. Remove any translator prefaces, apologies, AI/system disclaimers, or meta commentary; never prepend or append anything outside the narration itself.
+Never add editor prefaces such as "Sure, here's the rewrite", "As an AI", "Here you go", or meta commentary; begin directly with the first heading and narration. Remove any editor prefaces, apologies, AI/system disclaimers, or meta commentary; never prepend or append anything outside the narration itself.
 
-Section body to translate:
+Section body to edit:
 {section_body}
 """

@@ -29,7 +29,7 @@ def test_load_payload_reports_invalid_json(tmp_path: Path) -> None:
 def test_prepare_final_report_surfaces_error_details() -> None:
     event = {
         "status": "error",
-        "detail": "translator boom",
+        "detail": "editor boom",
         "section": "1: Intro",
     }
 
@@ -37,7 +37,7 @@ def test_prepare_final_report_surfaces_error_details() -> None:
         _prepare_final_report(event)
 
     message = str(excinfo.value)
-    assert "translator boom" in message
+    assert "editor boom" in message
     assert "1: Intro" in message
 
 

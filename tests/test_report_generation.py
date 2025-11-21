@@ -90,7 +90,7 @@ def test_report_generator_stream_produces_complete_report():
     stub_text_client = StubTextClient(
         [
             "### Overview\nWriter body",
-            "### Overview\nTranslated body",
+            "### Overview\nEdited body",
         ]
     )
     service = ReportGeneratorService(
@@ -104,7 +104,7 @@ def test_report_generator_stream_produces_complete_report():
             "models": {
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
-                "translator": {"model": "translator-model"},
+                "editor": {"model": "editor-model"},
             },
             "return": "report_with_outline",
         }
@@ -124,21 +124,21 @@ def test_report_generator_stream_produces_complete_report():
         "persistence_ready",
         "begin_sections",
         "writing_section",
-        "translating_section",
+        "editing_section",
         "section_complete",
         "complete",
     ]
 
     final_event = events[-1]
     assert final_event["report_title"] == "Insights"
-    assert final_event["report"] == "Insights\n\n1: Background\n\n1.1: Overview\nTranslated body"
+    assert final_event["report"] == "Insights\n\n1: Background\n\n1.1: Overview\nEdited body"
     assert final_event["outline_used"] == outline.model_dump()
 
     call_models = [model for model, *_ in stub_text_client.calls]
-    assert call_models == ["writer-model", "translator-model"]
+    assert call_models == ["writer-model", "editor-model"]
 
 
-def test_report_generator_translation_failure_emits_error_event():
+def test_report_generator_editing_failure_emits_error_event():
     outline = Outline(
         report_title="Insights",
         sections=[Section(title="Background", subsections=["Overview"])],
@@ -146,7 +146,7 @@ def test_report_generator_translation_failure_emits_error_event():
     stub_text_client = StubTextClient(
         [
             "### Overview\nWriter body",
-            RuntimeError("translator boom"),
+            RuntimeError("editor boom"),
         ]
     )
     service = ReportGeneratorService(
@@ -160,7 +160,7 @@ def test_report_generator_translation_failure_emits_error_event():
             "models": {
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
-                "translator": {"model": "translator-model"},
+                "editor": {"model": "editor-model"},
             },
         }
     )
@@ -180,17 +180,17 @@ def test_report_generator_translation_failure_emits_error_event():
         "persistence_ready",
         "begin_sections",
         "writing_section",
-        "translating_section",
+        "editing_section",
         "error",
     ]
 
     final_event = events[-1]
-    assert "translator boom" in final_event["detail"]
+    assert "editor boom" in final_event["detail"]
     assert final_event["section"] == "1: Background"
     assert len(stub_text_client.calls) == 2
 
 
-def test_report_generator_runs_translation_even_when_models_match():
+def test_report_generator_runs_editing_even_when_models_match():
     outline = Outline(
         report_title="Insights",
         sections=[Section(title="Background", subsections=["Overview"])],
@@ -198,7 +198,7 @@ def test_report_generator_runs_translation_even_when_models_match():
     stub_text_client = StubTextClient(
         [
             "### Overview\nWriter body",
-            "### Overview\nTranslated body",
+            "### Overview\nEdited body",
         ]
     )
     service = ReportGeneratorService(
@@ -212,7 +212,7 @@ def test_report_generator_runs_translation_even_when_models_match():
             "models": {
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
-                "translator": {"model": "translator-model"},
+                "editor": {"model": "editor-model"},
             },
         }
     )
@@ -226,7 +226,7 @@ def test_report_generator_runs_translation_even_when_models_match():
     asyncio.run(collect_events())
 
     statuses = [event["status"] for event in events]
-    assert "translating_section" in statuses
+    assert "editing_section" in statuses
     assert statuses[-1] == "complete"
     assert len(stub_text_client.calls) == 2
 
@@ -235,7 +235,7 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
     max_sections = 4
     sections = []
     responses = []
-    expected_translated_sections = []
+    expected_edited_sections = []
     for index in range(max_sections):
         section_number = index + 1
         subsection_title = f"{section_number}.1: Detail {section_number}"
@@ -243,10 +243,10 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
         responses.extend(
             [
                 f"{subsection_title}\nWriter body {section_number}",
-                f"{subsection_title}\nTranslated body {section_number}",
+                f"{subsection_title}\nEdited body {section_number}",
             ]
         )
-        expected_translated_sections.append(f"Translated body {section_number}")
+        expected_edited_sections.append(f"Edited body {section_number}")
 
     outline = Outline(report_title="Limited", sections=sections)
     stub_text_client = StubTextClient(responses)
@@ -261,7 +261,7 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
             "models": {
                 "outline": {"model": "outline-model"},
                 "writer": {"model": "writer-model"},
-                "translator": {"model": "translator-model"},
+                "editor": {"model": "editor-model"},
             },
             "return": "report_with_outline",
         }
@@ -282,8 +282,8 @@ def test_report_generator_processes_multiple_sections_with_minimal_outline():
 
     final_event = events[-1]
     assert final_event["outline_used"] == outline.model_dump()
-    for translated_body in expected_translated_sections:
-        assert translated_body in final_event["report"]
+    for edited_body in expected_edited_sections:
+        assert edited_body in final_event["report"]
 
     assert len(stub_text_client.calls) == max_sections * 2
 
@@ -376,7 +376,7 @@ def test_report_generator_streams_with_live_openai():
             "models": {
                 "outline": {"model": live_model},
                 "writer": {"model": live_model},
-                "translator": {"model": live_model},
+                "editor": {"model": live_model},
             },
             "return": "report_with_outline",
         }
@@ -399,6 +399,7 @@ def test_report_generator_streams_with_live_openai():
     assert "generating_outline" in statuses
     assert "outline_ready" in statuses
     assert "writing_section" in statuses
+    assert "editing_section" in statuses
     assert "section_complete" in statuses
     assert statuses[-1] == "complete"
 
