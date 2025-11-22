@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence
 
 from sqlalchemy import select
@@ -20,12 +19,6 @@ _DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"
 _DEFAULT_DB_URL = "sqlite:///reportgen.db"
 
 
-@dataclass(frozen=True)
-class _SuggestionCandidate:
-    title: str
-    source: str
-
-
 class SuggestionService:
 
     def __init__(
@@ -33,52 +26,23 @@ class SuggestionService:
         text_client: Optional[OpenAITextClient] = None,
         *,
         session_factory: Optional[sessionmaker[Session]] = None,
-        enable_free_roam_default: bool = False,
     ) -> None:
         self.text_client = text_client or get_default_text_client()
         self.session_factory = session_factory or self._build_session_factory()
-        self.enable_free_roam_default = enable_free_roam_default
 
     async def generate(self, request: SuggestionsRequest) -> SuggestionsResponse:
         seeds = self._collect_seeds(request)
         if not seeds:
             return SuggestionsResponse(suggestions=[])
 
-        enable_free_roam = request.enable_free_roam or self.enable_free_roam_default
-        guided_prompt = self._build_prompt(seeds, guided=True)
-        guided_task = self.text_client.call_text_async(
-            request.model, self._system_prompt(), guided_prompt
+        max_suggestions = request.max_suggestions or 10
+        prompt = self._build_prompt(seeds)
+        raw_response = await self.text_client.call_text_async(
+            request.model, self._system_prompt(), prompt
         )
-
-        free_roam_task = None
-        if enable_free_roam:
-            free_roam_prompt = self._build_prompt(seeds, guided=False)
-            free_roam_task = self.text_client.call_text_async(
-                request.model, self._system_prompt(), free_roam_prompt
-            )
-
-        guided_response = await guided_task
-        guided_candidates = self._parse_candidates(guided_response, "guided")
-
-        free_roam_candidates: List[_SuggestionCandidate] = []
-        if free_roam_task:
-            try:
-                free_roam_response = await free_roam_task
-                free_roam_candidates = self._parse_candidates(
-                    free_roam_response, "free_roam"
-                )
-            except Exception:
-                free_roam_candidates = []
-
-        merged = self._merge_candidates(
-            guided_candidates + free_roam_candidates,
-            request.max_suggestions,
-        )
+        titles = self._parse_titles(raw_response, max_suggestions)
         return SuggestionsResponse(
-            suggestions=[
-                SuggestionItem(title=candidate.title, source=candidate.source)
-                for candidate in merged
-            ]
+            suggestions=[SuggestionItem(title=title, source="guided") for title in titles]
         )
 
     def _collect_seeds(self, request: SuggestionsRequest) -> List[str]:
@@ -111,71 +75,44 @@ class SuggestionService:
                 title = (section.get("title") or "").strip()
                 if title:
                     headings.append(title)
-                for sub in section.get("subsections") or []:
-                    cleaned_sub = (sub or "").strip()
-                    if cleaned_sub:
-                        headings.append(cleaned_sub)
+            for sub in section.get("subsections") or []:
+                cleaned_sub = (sub or "").strip()
+                if cleaned_sub:
+                    headings.append(cleaned_sub)
         return headings
 
-    def _build_prompt(self, seeds: Sequence[str], *, guided: bool) -> str:
+    def _build_prompt(self, seeds: Sequence[str]) -> str:
         seeds_block = "\n".join(f"- {entry}" for entry in seeds[:20])
-        guidance = (
-            "Keep suggestions tightly related to the seeds; avoid vague tangents."
-            if guided
-            else "You can stray a bit if it helps surface adjacent or contrasting topics."
-        )
         return (
             "You suggest concise, meaningful topics related to the provided seeds. "
             "Return strictly valid JSON. Use Title Case."
             f"\n\nSeeds:\n{seeds_block}\n"
             "\nOutput JSON schema:\n"
             "{\n"
-            '  "suggestions": [{"title": "Concise topic"}]\n'
+            '  "suggestions": [{"title": "Concise topic string"}]\n'
             "}\n"
-            "Return suggestions as objects (not bare strings). "
+            "Return suggestions as objects only (never bare strings). "
             "Keep titles under 80 characters, avoid duplicates, and skip anything too vague. "
-            f"{guidance}"
         )
 
-    def _parse_candidates(
-        self, raw_response: str, source: str
-    ) -> List[_SuggestionCandidate]:
+    def _parse_titles(
+        self, raw_response: str, max_suggestions: int
+    ) -> List[str]:
         parsed = self._try_json_parse(raw_response)
-        if not parsed:
+        if not parsed or not isinstance(parsed, dict):
             return []
-        items: List[_SuggestionCandidate] = []
-        if isinstance(parsed, dict) and isinstance(parsed.get("suggestions"), list):
-            entries = parsed["suggestions"]
-        elif isinstance(parsed, list):
-            entries = parsed
-        else:
-            return []
+        entries = parsed.get("suggestions") or []
+
+        deduped: List[str] = []
+        seen = set()
         for entry in entries:
             title = self._extract_title(entry)
-            if not title:
-                continue
-            items.append(_SuggestionCandidate(title=title, source=source))
-        return items
-
-    def _merge_candidates(
-        self,
-        candidates: Sequence[_SuggestionCandidate],
-        max_suggestions: int,
-    ) -> List[_SuggestionCandidate]:
-        deduped: List[_SuggestionCandidate] = []
-        seen = set()
-        for candidate in candidates:
-            normalized = self._normalize_title(candidate.title)
+            normalized = self._normalize_title(title) if title else ""
             key = normalized.casefold()
             if not normalized or key in seen:
                 continue
             seen.add(key)
-            deduped.append(
-                _SuggestionCandidate(
-                    title=normalized,
-                    source=candidate.source,
-                )
-            )
+            deduped.append(normalized)
             if len(deduped) >= max_suggestions:
                 break
         return deduped
@@ -202,8 +139,6 @@ class SuggestionService:
 
     @staticmethod
     def _extract_title(entry: object) -> Optional[str]:
-        if isinstance(entry, str):
-            return entry
         if isinstance(entry, dict):
             title = (entry.get("title") or entry.get("topic") or "").strip()
             return title or None
