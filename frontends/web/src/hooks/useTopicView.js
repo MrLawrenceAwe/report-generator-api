@@ -37,7 +37,6 @@ export function useTopicView({
             const remote = await fetchTopicSuggestions(apiBase, {
                 topic: topicViewTopic,
                 seeds: [],
-                enableFreeRoam: false,
                 includeReportHeadings: false,
                 model: suggestionModel,
                 signal: controller.signal,

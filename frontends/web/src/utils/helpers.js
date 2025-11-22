@@ -250,7 +250,6 @@ export function persistSuggestionModel(model) {
 export async function fetchTopicSuggestions(apiBase, {
     topic,
     seeds = [],
-    enableFreeRoam = false,
     includeReportHeadings = true,
     model,
     signal,
@@ -259,7 +258,6 @@ export async function fetchTopicSuggestions(apiBase, {
     const payload = {
         topic: topic || "",
         seeds: Array.isArray(seeds) ? seeds : [],
-        enable_free_roam: Boolean(enableFreeRoam),
         include_report_headings: Boolean(includeReportHeadings),
         ...(modelSpec ? { model: modelSpec } : {}),
     };

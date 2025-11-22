@@ -27,7 +27,6 @@ export function useExplore({
             ];
             const remote = await fetchTopicSuggestions(apiBase, {
                 seeds,
-                enableFreeRoam: false,
                 model: suggestionModel,
                 signal: controller.signal,
             });
