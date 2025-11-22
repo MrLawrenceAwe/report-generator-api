@@ -40,7 +40,8 @@ class SuggestionService:
         raw_response = await self.text_client.call_text_async(
             request.model, self._system_prompt(), prompt
         )
-        titles = self._parse_titles(raw_response, max_suggestions)
+        seen: set[str] = set()
+        titles = self._parse_titles(raw_response, max_suggestions, seen)
         return SuggestionsResponse(
             suggestions=[SuggestionItem(title=title, source="guided") for title in titles]
         )
@@ -96,22 +97,30 @@ class SuggestionService:
         )
 
     def _parse_titles(
-        self, raw_response: str, max_suggestions: int
+        self, raw_response: str, max_suggestions: int, seen: Optional[set[str]] = None
     ) -> List[str]:
-        parsed = self._try_json_parse(raw_response)
-        if not parsed or not isinstance(parsed, dict):
+        if max_suggestions <= 0:
             return []
-        entries = parsed.get("suggestions") or []
+        seen_titles: set[str] = seen if seen is not None else set()
+        parsed = self._try_json_parse(raw_response)
+        if not parsed:
+            return []
+        entries = (
+            parsed.get("suggestions")
+            if isinstance(parsed, dict)
+            else parsed
+            if isinstance(parsed, list)
+            else []
+        )
 
         deduped: List[str] = []
-        seen = set()
         for entry in entries:
             title = self._extract_title(entry)
             normalized = self._normalize_title(title) if title else ""
             key = normalized.casefold()
-            if not normalized or key in seen:
+            if not normalized or key in seen_titles:
                 continue
-            seen.add(key)
+            seen_titles.add(key)
             deduped.append(normalized)
             if len(deduped) >= max_suggestions:
                 break
@@ -142,6 +151,9 @@ class SuggestionService:
         if isinstance(entry, dict):
             title = (entry.get("title") or entry.get("topic") or "").strip()
             return title or None
+        if isinstance(entry, str):
+            cleaned = entry.strip()
+            return cleaned or None
         return None
 
     @staticmethod
