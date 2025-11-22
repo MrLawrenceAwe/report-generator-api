@@ -168,7 +168,6 @@ class SuggestionService:
         return (
             "You are a topic suggestion engine. Always return concise, concrete topics "
             "related to the provided seeds. Focus on usefulness over cleverness. "
-            "Use Title Case."
         )
 
     @staticmethod
