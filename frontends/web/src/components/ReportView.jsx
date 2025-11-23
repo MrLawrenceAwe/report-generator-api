@@ -49,7 +49,7 @@ function extractOutlineFromContent(content) {
             addHeading(markdownMatch[1]);
             return;
         }
-        const numberedMatch = trimmed.match(/^(?:Section\s+\d+[:.\-]?\s*|[0-9]+[\.\)]\s+)(.+)$/i);
+        const numberedMatch = trimmed.match(/^(?:Section\s+\d+[:.-]?\s*|[0-9]+[.)]\s+)(.+)$/i);
         if (numberedMatch) {
             addHeading(numberedMatch[1]);
         }
@@ -63,7 +63,7 @@ function extractOutlineFromContent(content) {
             if (heading.length > 140) return;
             const wordCount = heading.split(/\s+/).length;
             if (/[.!?]"?$/.test(heading) && wordCount > 10) return;
-            if (/^[\-\*\u2022]/.test(heading)) return;
+            if (/^[-*\u2022]/.test(heading)) return;
             addHeading(heading);
         });
     }
