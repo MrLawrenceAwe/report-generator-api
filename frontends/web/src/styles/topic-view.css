@@ -418,6 +418,7 @@
         width: 100%;
     }
 }
+
 .topic-view__refine {
     display: flex;
     gap: var(--space-4);
