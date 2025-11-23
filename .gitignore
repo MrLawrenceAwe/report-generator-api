@@ -8,4 +8,6 @@ scripts/dev.sh
 terminal_command_cheat_sheet.txt
 reportgen.db
 reportgen.db.migration-lock
+data/reportgen.db
+data/reportgen.db.migration-lock
 .vscode/settings.json

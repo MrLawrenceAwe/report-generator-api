@@ -26,7 +26,7 @@ from backend.db import (
 )
 from backend.schemas import GenerateRequest, Outline
 
-_DEFAULT_DB_URL = "sqlite:///reportgen.db"
+_DEFAULT_DB_URL = "sqlite:///data/reportgen.db"
 _DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"
 _DEFAULT_STORAGE_ENV = "EXPLORER_REPORT_STORAGE_DIR"
 _DEFAULT_STORAGE_DIR = "data/reports"
