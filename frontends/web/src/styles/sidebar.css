@@ -329,3 +329,32 @@
         transform: translateX(0);
     }
 }
+
+/* Generating Report Entry */
+.sidebar-entry--generating {
+    border: 1px solid var(--color-accent-primary);
+    background: var(--color-accent-subtle);
+}
+
+.sidebar-entry--generating .sidebar-entry__eyebrow {
+    color: var(--color-accent-primary);
+    font-weight: 600;
+}
+
+.sidebar-entry__spinner {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-accent-primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

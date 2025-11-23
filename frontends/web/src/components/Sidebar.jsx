@@ -17,6 +17,8 @@ export function Sidebar({
     onResetExplore,
     isSyncing,
     savedError,
+    generatingReport,
+    onGeneratingReportSelect,
 }) {
     return (
         <aside className="sidebar" aria-label="Saved prompts and generated reports">
@@ -52,6 +54,8 @@ export function Sidebar({
                 />
                 <ReportsList
                     savedReports={savedReports}
+                    generatingReport={generatingReport}
+                    onGeneratingReportSelect={onGeneratingReportSelect}
                     onReportSelect={onReportSelect}
                     handleReportRemove={handleReportRemove}
                 />

@@ -46,6 +46,8 @@ function App() {
   const [chatAvoidTopics, setChatAvoidTopics] = useState("");
   const [chatIncludeTopics, setChatIncludeTopics] = useState("");
 
+  const [isHomeView, setIsHomeView] = useState(false);
+
   const {
     modelPresets,
     defaultPreset,
@@ -153,20 +155,7 @@ function App() {
     }
   }, [loadReports, user.email, setSavedReports]);
 
-  const forgetReport = useCallback(async (id) => {
-    if (!id) return;
-    if (!user.email) {
-      setSavedReports((current) => current.filter((entry) => entry.id !== id));
-      return;
-    }
-    try {
-      await deleteSavedReport(apiBase, user, id);
-      setSavedReports((current) => current.filter((entry) => entry.id !== id));
-    } catch (error) {
-      console.error("Failed to delete report", error);
-      setSavedError(error.message || "Failed to delete report.");
-    }
-  }, [apiBase, user]);
+
 
   const {
     messages,
@@ -177,6 +166,32 @@ function App() {
     appendMessage,
     stopGeneration,
   } = useChat(apiBase, rememberReport);
+
+  const forgetReport = useCallback(async (id) => {
+    if (!id) return;
+
+    const reportToDelete = savedReports.find(r => r.id === id);
+
+    if (!user.email) {
+      setSavedReports((current) => current.filter((entry) => entry.id !== id));
+    } else {
+      try {
+        await deleteSavedReport(apiBase, user, id);
+        setSavedReports((current) => current.filter((entry) => entry.id !== id));
+      } catch (error) {
+        console.error("Failed to delete report", error);
+        setSavedError(error.message || "Failed to delete report.");
+      }
+    }
+
+    if (reportToDelete && !isRunning) {
+      const assistantMsg = [...messages].reverse().find((m) => m.role === "assistant" && m.reportTopic);
+      if (assistantMsg && assistantMsg.reportTopic === reportToDelete.topic) {
+        setMessages([]);
+        setIsHomeView(true);
+      }
+    }
+  }, [apiBase, user, savedReports, messages, isRunning, setMessages]);
 
   const rememberTopics = useCallback(async (prompts) => {
     const normalizedPrompts = (Array.isArray(prompts) ? prompts : [prompts])
@@ -327,6 +342,7 @@ function App() {
         sections: reportPayload.sections || null,
       });
       closeTopicView();
+      setIsHomeView(false);
     },
     [closeTopicView]
   );
@@ -343,6 +359,7 @@ function App() {
     if (!safeTopic) return;
     setActiveReport(null);
     openTopicView(safeTopic, { pauseSuggestions: Boolean(options.pauseSuggestions) });
+    setIsHomeView(false);
   }, [openTopicView]);
 
   const {
@@ -373,6 +390,7 @@ function App() {
     onGenerate: async (payload, assistantId, topicText) => {
       setActiveReport(null);
       setIsRunning(true);
+      setIsHomeView(false);
       const payloadWithUser = {
         ...payload,
         user_email: user.email || undefined,
@@ -396,6 +414,7 @@ function App() {
       const prompt = composerValue.trim();
       if (!prompt || isRunning) return;
       setComposerValue("");
+      setIsHomeView(false);
       const avoid = chatAvoidTopics.split(",").map(s => s.trim()).filter(Boolean);
       const include = chatIncludeTopics.split(",").map(s => s.trim()).filter(Boolean);
       await runTopicPrompt(prompt, { avoid, include });
@@ -467,11 +486,11 @@ function App() {
     () => savedTopics.some((entry) => entry.prompt === topicViewTopic),
     [savedTopics, topicViewTopic]
   );
-  const shouldShowExplore = !isTopicViewOpen && !isReportViewOpen && !hasMessages;
+  const shouldShowExplore = isHomeView || (!isTopicViewOpen && !isReportViewOpen && !hasMessages);
   const presetLabel = MODEL_PRESET_LABELS[selectedPreset] || selectedPreset;
 
   const chatPaneClasses = ["chat-pane"];
-  if (!hasMessages && !isTopicViewOpen && !isReportViewOpen) {
+  if (isHomeView || (!hasMessages && !isTopicViewOpen && !isReportViewOpen)) {
     chatPaneClasses.push("chat-pane--empty");
   }
   if (isTopicViewOpen || isReportViewOpen) {
@@ -479,13 +498,40 @@ function App() {
   }
   const chatPaneClassName = chatPaneClasses.join(" ");
 
+  const generatingReport = useMemo(() => {
+    // If running, we definitely have an active session.
+    // If NOT running, but we have messages and are in home view, we have a "backgrounded" session.
+    if (!isRunning && (!hasMessages || !isHomeView)) return null;
 
+    const assistantMsg = [...messages].reverse().find((m) => m.role === "assistant" && m.reportTopic);
+    if (assistantMsg) {
+      // If the report is already saved and we are not running, don't show it as an active session
+      const isSaved = savedReports.some(r => r.topic === assistantMsg.reportTopic);
+      if (isSaved && !isRunning) return null;
+
+      return {
+        id: "generating",
+        topic: assistantMsg.reportTopic,
+        title: assistantMsg.reportTopic,
+        isGenerating: isRunning,
+      };
+    }
+    return null;
+  }, [isRunning, messages, hasMessages, isHomeView, savedReports]);
+
+  const handleGeneratingReportSelect = useCallback(() => {
+    setActiveReport(null);
+    closeTopicView();
+    setIsHomeView(false);
+  }, [closeTopicView]);
 
   return (
     <div className="page">
       <Sidebar
         savedTopics={savedTopics}
         savedReports={savedReports}
+        generatingReport={generatingReport}
+        onGeneratingReportSelect={handleGeneratingReportSelect}
         handleTopicRecall={handleTopicRecall}
         handleTopicRemove={forgetTopic}
         handleReportRemove={forgetReport}
@@ -497,7 +543,10 @@ function App() {
         onResetExplore={() => {
           closeTopicView();
           setActiveReport(null);
-          setMessages([]);
+          if (!isRunning) {
+            setMessages([]);
+          }
+          setIsHomeView(true);
           setMode("topic");
         }}
         isSyncing={isSyncingSaved}
@@ -569,16 +618,18 @@ function App() {
             onOpenTopic={handleOpenTopic}
           />
         ) : (
-
           <ChatPane
-            messages={messages}
+            messages={isHomeView ? [] : messages}
             mode={mode}
             setMode={setMode}
             isRunning={isRunning}
             onReset={() => {
               closeTopicView();
               setActiveReport(null);
-              setMessages([]);
+              if (!isRunning) {
+                setMessages([]);
+              }
+              setIsHomeView(true);
               setMode("topic");
             }}
             composerValue={composerValue}
@@ -623,7 +674,7 @@ function App() {
             onStageModelChange={handleStageModelChange}
             selectedPreset={selectedPreset}
             onPresetSelect={handlePresetSelect}
-            hideComposer={isRunning}
+            hideComposer={!isHomeView && isRunning}
             onViewReport={handleReportOpen}
             avoidTopics={chatAvoidTopics}
             setAvoidTopics={setChatAvoidTopics}
