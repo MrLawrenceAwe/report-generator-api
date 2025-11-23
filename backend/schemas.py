@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
+import uuid
 
 from pydantic import BaseModel, Field, model_validator
+
+from backend.db import ReportStatus
 
 ReasoningEffort = Literal["minimal", "low", "medium", "high"]
 
@@ -174,3 +177,25 @@ class SuggestionsRequest(BaseModel):
 
 class SuggestionsResponse(BaseModel):
     suggestions: List[SuggestionItem] = Field(default_factory=list)
+
+
+class SavedTopicResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    slug: str
+    created_at: str
+
+
+class CreateSavedTopicRequest(BaseModel):
+    title: str
+
+
+class ReportResponse(BaseModel):
+    id: uuid.UUID
+    topic: str
+    title: Optional[str]
+    status: ReportStatus
+    summary: Optional[str]
+    content: Optional[str] = None
+    created_at: str
+    updated_at: str
