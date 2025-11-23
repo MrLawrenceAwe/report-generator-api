@@ -16,7 +16,8 @@ export function ReportView({ report, onClose }) {
 
     if (!report) return null;
     const title = (report.title || report.topic || "Explorer Report").trim() || "Explorer Report";
-    const topic = (report.topic || title).trim();
+    const topic = (report.topic || "").trim();
+    const subtitle = topic && topic !== title ? topic : null;
 
     const handleDownload = () => {
         if (!report.content) return;
@@ -45,7 +46,7 @@ export function ReportView({ report, onClose }) {
                 <div>
                     <p className="report-view__eyebrow">Report</p>
                     <h1 className="report-view__title">{title}</h1>
-                    {topic && <p className="report-view__subtitle">{topic}</p>}
+                    {subtitle && <p className="report-view__subtitle">{subtitle}</p>}
                 </div>
                 <div className="report-view__actions">
                     {report.content && (
