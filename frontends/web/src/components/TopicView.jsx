@@ -130,7 +130,7 @@ export function TopicView({
                     />
                     <button
                         type="button"
-                        className="topic-view__generate"
+                        className="topic-view__generate button-generate"
                         onClick={handleGenerate}
                         disabled={isRunning}
                     >

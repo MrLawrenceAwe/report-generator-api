@@ -175,7 +175,11 @@ export function OutlineForm({
                         + Add Section
                     </button>
                 )}
-                <button type="submit" className="outline-submit" disabled={!isFormValid || isRunning}>
+                <button
+                    type="submit"
+                    className="outline-submit button-generate"
+                    disabled={!isFormValid || isRunning}
+                >
                     {submitLabel}
                 </button>
             </div>

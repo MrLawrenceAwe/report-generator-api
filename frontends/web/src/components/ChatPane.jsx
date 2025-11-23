@@ -139,7 +139,11 @@ export function ChatPane({
                                     onChange={setSectionCount}
                                     disabled={isRunning}
                                 />
-                                <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
+                                <button
+                                    type={isRunning ? "button" : "submit"}
+                                    onClick={isRunning ? handleStop : undefined}
+                                    className="button-generate"
+                                >
                                     {composerButtonLabel}
                                 </button>
                             </div>

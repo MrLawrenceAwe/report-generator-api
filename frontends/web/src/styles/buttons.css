@@ -1,0 +1,88 @@
+.button-generate {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    min-width: 170px;
+    min-height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #5b95ff 0%, var(--color-accent-primary) 45%, var(--color-accent-hover) 100%);
+    color: #ffffff;
+    font-weight: 650;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+    box-shadow: 0 12px 30px -14px rgba(59, 130, 246, 0.65), 0 0 0 1px var(--color-accent-subtle);
+    isolation: isolate;
+    overflow: hidden;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.button-generate::after,
+.button-generate::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.button-generate::after {
+    background: radial-gradient(circle at 20% 25%, rgba(255, 255, 255, 0.32), transparent 45%),
+        radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.18), transparent 40%);
+    opacity: 0.85;
+}
+
+.button-generate::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+    opacity: 0;
+}
+
+.button-generate:disabled {
+    opacity: 0.7;
+    background: linear-gradient(135deg, rgba(91, 149, 255, 0.6), rgba(37, 99, 235, 0.55));
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-md);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.button-generate:not(:disabled):hover {
+    background: linear-gradient(135deg, #7aaaff 0%, var(--color-accent-primary) 50%, var(--color-accent-hover) 100%);
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 18px 38px -14px rgba(59, 130, 246, 0.75), 0 0 0 1px var(--color-accent-subtle);
+}
+
+.button-generate:not(:disabled):hover::before {
+    opacity: 1;
+}
+
+.button-generate:not(:disabled):hover::after {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.button-generate:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-accent-subtle), 0 14px 32px -12px rgba(59, 130, 246, 0.75);
+}
+
+.topic-view__generate.button-generate {
+    min-width: 180px;
+}
+
+.composer .button-generate {
+    height: 42px;
+    min-width: 150px;
+    padding: var(--space-2) var(--space-5);
+}
+
+.outline-submit.button-generate {
+    align-self: flex-end;
+    min-width: 170px;
+}

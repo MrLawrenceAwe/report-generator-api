@@ -240,28 +240,7 @@
 }
 
 .topic-view__generate {
-    border: none;
-    border-radius: var(--radius-full);
-    padding: var(--space-3) var(--space-6);
-    background: var(--color-accent-primary);
-    color: #ffffff;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    box-shadow: var(--shadow-md);
-}
-
-.topic-view__generate:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.topic-view__generate:not(:disabled):hover {
-    background: var(--color-accent-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
+    min-width: 180px;
 }
 
 .topic-view__suggestions-header {
