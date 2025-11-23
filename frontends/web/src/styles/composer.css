@@ -296,3 +296,7 @@
     transform: none;
     opacity: 1;
 }
+
+.composer .refine-toggle__button--active {
+    color: var(--color-accent-primary);
+}
