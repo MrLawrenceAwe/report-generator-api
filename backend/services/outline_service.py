@@ -18,7 +18,6 @@ from backend.utils.model_utils import supports_reasoning
 
 
 class OutlineService:
-    """Encapsulates outline request helpers shared by GET/POST flows."""
 
     def __init__(self, text_client: Optional[OpenAITextClient] = None) -> None:
         self._text_client = text_client or get_default_text_client()
@@ -35,11 +34,7 @@ class OutlineService:
         subject_inclusions: Optional[List[str]] = None,
         subject_exclusions: Optional[List[str]] = None,
     ) -> OutlineRequest:
-        """Build an ``OutlineRequest`` for the supplied topic.
 
-        Any provided ``model_spec`` is copied before mutation so callers retain their original
-        ``ModelSpec`` instance unchanged.
-        """
         normalized_topic = topic.strip()
         if not normalized_topic:
             raise ValueError("Topic must contain non-whitespace characters.")

@@ -13,6 +13,7 @@ def _build_outline_prompt_base(
         f"Write a detailed outline for a report on the topic of \"{topic}\".",
         "Organize it into main sections (Section 1, Section 2, etc.). Under each main "
         "section, list subsections (1.1, 1.2, etc.).",
+        "Give every main section and every subsection a clear, descriptive header/title.",
         "Make sure it's comprehensive, covering key concepts and sub-topics.",
     ]
     if sections:

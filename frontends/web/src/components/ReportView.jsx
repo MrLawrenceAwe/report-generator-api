@@ -160,7 +160,7 @@ export function ReportView({ report, onClose, onOpenTopic }) {
                             onClick={() => setIsOutlineOpen((open) => !open)}
                             aria-pressed={isOutlineOpen}
                         >
-                            {isOutlineOpen ? "Hide outline" : "View outline"}
+                            {isOutlineOpen ? "Hide Outline" : "View Outline"}
                         </button>
                     )}
                     {report.content && (

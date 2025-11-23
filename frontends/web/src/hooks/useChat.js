@@ -10,21 +10,21 @@ export function useChat(apiBase, rememberReport) {
             case "started":
                 return "Starting…";
             case "generating_outline":
-                return `Generating Outline (${event.model || "model unknown"})…`;
+                return `Generating Outline…`;
             case "outline_ready":
-                return `Outline Ready (${event.sections} sections)`;
+                return `Outline Ready (${event.sections} Sections)`;
             case "begin_sections":
-                return `Writing Sections (${event.count} sections)…`;
+                return `Writing Sections (${event.count})…`;
             case "writing_section":
-                return `Writing ${event.section}`;
+                return `Writing Section ${event.section}`;
             case "editing_section":
-                return `Editing ${event.section}`;
+                return `Editing Section ${event.section}`;
             case "section_complete":
                 return `Finished ${event.section}`;
             case "writer_model_fallback":
                 return `Retrying ${event.section} with ${event.fallback_model}`;
             case "complete":
-                return "Ready";
+                return "Complete.";
             default:
                 return "";
         }
