@@ -132,6 +132,17 @@ export function generateRelatedTopics(topic) {
     return Array.from(new Set(suggestions));
 }
 
+export function cleanHeadingForTopic(heading) {
+    const original = (heading || "").trim();
+    if (!original) return "";
+    let cleaned = original.replace(/^(section|chapter)\s+\d+\s*[:.)-]?\s*/i, "");
+    cleaned = cleaned.replace(/^\d+\s*[:.)-]?\s*/, "");
+    cleaned = cleaned.replace(/^(introduction|background)\s*[:.)-]?\s*/i, "");
+    cleaned = cleaned.replace(/^[\-\u2022*]\s*/, "");
+    cleaned = cleaned.trim();
+    return cleaned || original;
+}
+
 export function loadApiBase() {
     const params = new URL(window.location.href).searchParams;
     const paramBase = params.get("apiBase");

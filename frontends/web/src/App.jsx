@@ -25,6 +25,7 @@ import {
   deleteSavedTopic,
   fetchSavedReports,
   deleteSavedReport,
+  cleanHeadingForTopic,
 } from './utils/helpers';
 
 import { ExploreSuggestions } from './components/ExploreSuggestions';
@@ -111,7 +112,7 @@ function App() {
     refreshSavedData();
   }, [refreshSavedData]);
 
-  const rememberReport = useCallback(async (topic, content, title) => {
+  const rememberReport = useCallback(async (topic, content, title, outline = null) => {
     const safeContent = content || "";
     const normalizedTitle = (title || topic || "Explorer Report").trim() || "Explorer Report";
     const normalizedTopic = (topic || normalizedTitle).trim();
@@ -123,6 +124,7 @@ function App() {
           topic: normalizedTopic,
           title: normalizedTitle,
           content: safeContent,
+          outline,
           preview: summary,
         },
         ...current,
@@ -140,6 +142,7 @@ function App() {
           topic: normalizedTopic,
           title: normalizedTitle,
           content: safeContent,
+          outline,
           preview: summary,
         },
         ...current,
@@ -314,6 +317,8 @@ function App() {
         topic,
         preview,
         content,
+        outline: reportPayload.outline || reportPayload.sections?.outline || null,
+        sections: reportPayload.sections || null,
       });
       closeTopicView();
     },
@@ -324,9 +329,14 @@ function App() {
     setActiveReport(null);
   }, []);
 
-  const handleOpenTopic = useCallback((topic) => {
+  const handleOpenTopic = useCallback((topic, options = {}) => {
+    const normalized = options.normalizeHeading
+      ? cleanHeadingForTopic(topic)
+      : (topic || "");
+    const safeTopic = (normalized || "").trim();
+    if (!safeTopic) return;
     setActiveReport(null);
-    openTopicView(topic);
+    openTopicView(safeTopic, { pauseSuggestions: Boolean(options.pauseSuggestions) });
   }, [openTopicView]);
 
   const {
@@ -538,6 +548,7 @@ function App() {
           <ReportView
             report={activeReport}
             onClose={handleReportClose}
+            onOpenTopic={handleOpenTopic}
           />
         ) : (
 

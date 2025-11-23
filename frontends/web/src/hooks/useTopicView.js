@@ -16,6 +16,7 @@ export function useTopicView({
     const [topicSuggestionsNonce, setTopicSuggestionsNonce] = useState(0);
     const [selectedSuggestions, setSelectedSuggestions] = useState([]);
     const [topicSelectMode, setTopicSelectMode] = useState(false);
+    const [suggestionsPaused, setSuggestionsPaused] = useState(false);
     const topicSelectToggleRef = useRef(null);
     const topicSuggestionsRef = useRef(null);
     const topicViewEditorRef = useRef(null);
@@ -31,8 +32,9 @@ export function useTopicView({
     }, [isTopicEditing]);
 
     useEffect(() => {
-        if (!topicViewTopic) return;
+        if (!topicViewTopic || suggestionsPaused) return;
         const controller = new AbortController();
+        setTopicSuggestionsLoading(true);
         const loadSuggestions = async () => {
             const remote = await fetchTopicSuggestions(apiBase, {
                 topic: topicViewTopic,
@@ -46,19 +48,22 @@ export function useTopicView({
             setTopicSuggestions(merged);
             setTopicSuggestionsLoading(false);
         };
-        loadSuggestions();
+        loadSuggestions().catch(() => setTopicSuggestionsLoading(false));
         return () => controller.abort();
-    }, [apiBase, topicSuggestionsNonce, topicViewTopic, suggestionModel]);
+    }, [apiBase, topicSuggestionsNonce, topicViewTopic, suggestionModel, suggestionsPaused]);
 
-    const openTopicView = useCallback((topic) => {
+    const openTopicView = useCallback((topic, options = {}) => {
         const normalized = (topic || "").trim();
         if (!normalized) return;
+        const pauseSuggestions = Boolean(options.pauseSuggestions);
         setTopicViewTopic(normalized);
         setTopicViewDraft(normalized);
         setIsTopicEditing(false);
-        setTopicSuggestionsLoading(true);
+        setTopicSuggestionsLoading(!pauseSuggestions);
         setSelectedSuggestions([]);
         setTopicSelectMode(false);
+        setTopicSuggestions([]);
+        setSuggestionsPaused(pauseSuggestions);
     }, []);
 
     const closeTopicView = useCallback(() => {
@@ -68,6 +73,7 @@ export function useTopicView({
         setTopicSuggestions([]);
         setSelectedSuggestions([]);
         setTopicSelectMode(false);
+        setSuggestionsPaused(false);
     }, []);
 
     const startTopicEditing = useCallback(() => {
@@ -166,6 +172,7 @@ export function useTopicView({
     }, [rememberTopics, selectedSuggestions]);
 
     const handleRefreshSuggestions = useCallback(() => {
+        setSuggestionsPaused(false);
         setTopicSuggestionsNonce((value) => value + 1);
     }, []);
 

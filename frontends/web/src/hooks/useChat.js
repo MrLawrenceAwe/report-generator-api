@@ -145,7 +145,7 @@ export function useChat(apiBase, rememberReport) {
                     outline: finalOutline,
                 }));
                 if (finalText && summaryLabel) {
-                    rememberReport(summaryLabel, finalText, resolvedTitle);
+                    rememberReport(summaryLabel, finalText, resolvedTitle, finalOutline);
                 }
                 return true;
             } catch (error) {

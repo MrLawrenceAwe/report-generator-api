@@ -9,6 +9,7 @@ export function MessageBubble({ message, onViewReport }) {
             title: message.reportTitle,
             topic: message.reportTopic,
             content: message.reportText,
+            outline: message.outline,
         });
     };
 
