@@ -6,6 +6,7 @@ import { SectionCountSelector } from './SectionCountSelector';
 import { ModelOverrideToggle } from './ModelOverrideToggle';
 import { ModeToggle } from './ModeToggle';
 import { MessageBubble } from './MessageBubble';
+import { RefineToggle } from './RefineToggle';
 
 export function ChatPane({
     messages,
@@ -28,6 +29,10 @@ export function ChatPane({
     presetLabel,
     hideComposer = false,
     onViewReport,
+    avoidTopics,
+    setAvoidTopics,
+    includeTopics,
+    setIncludeTopics,
 }) {
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
@@ -120,14 +125,25 @@ export function ChatPane({
                             disabled={isRunning}
                             aria-label="Ask Explorer anything"
                         />
-                        <SectionCountSelector
-                            value={sectionCount}
-                            onChange={setSectionCount}
-                            disabled={isRunning}
-                        />
-                        <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
-                            {composerButtonLabel}
-                        </button>
+                        <div className="composer__footer">
+                            <RefineToggle
+                                avoidTopics={avoidTopics}
+                                setAvoidTopics={setAvoidTopics}
+                                includeTopics={includeTopics}
+                                setIncludeTopics={setIncludeTopics}
+                                isRunning={isRunning}
+                            />
+                            <div className="composer__footer-right">
+                                <SectionCountSelector
+                                    value={sectionCount}
+                                    onChange={setSectionCount}
+                                    disabled={isRunning}
+                                />
+                                <button type={isRunning ? "button" : "submit"} onClick={isRunning ? handleStop : undefined}>
+                                    {composerButtonLabel}
+                                </button>
+                            </div>
+                        </div>
                     </form>
                 </div>
             ) : (

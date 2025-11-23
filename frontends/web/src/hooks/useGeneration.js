@@ -12,9 +12,11 @@ export function useGeneration({
     isRunning,
 }) {
     const runTopicPrompt = useCallback(
-        async (prompt) => {
+        async (prompt, options = {}) => {
             const normalizedPrompt = (prompt || "").trim();
             if (!normalizedPrompt || isRunning) return false;
+
+            const { avoid = [], include = [] } = options;
 
             setActiveReport(null);
             const assistantId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -43,6 +45,8 @@ export function useGeneration({
                         models: modelsPayload,
                         user_email: user.email || undefined,
                         username: user.username || undefined,
+                        subject_exclusions: avoid,
+                        subject_inclusions: include,
                     },
                     assistantId,
                     normalizedPrompt

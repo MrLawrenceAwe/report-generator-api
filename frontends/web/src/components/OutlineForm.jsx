@@ -1,5 +1,6 @@
 import React from 'react';
 import { OUTLINE_INPUT_MODES } from '../utils/helpers';
+import { RefineToggle } from './RefineToggle';
 
 export function OutlineForm({
     outlineTopic,
@@ -24,21 +25,34 @@ export function OutlineForm({
         handleAddSubsection,
         handleRemoveSubsection,
     },
+    avoidTopics,
+    setAvoidTopics,
+    includeTopics,
+    setIncludeTopics,
 }) {
     return (
         <form
             className={`outline-composer${isRunning ? " outline-composer--pending" : ""}`}
             onSubmit={handleSubmit}
         >
-            <label className="outline-composer__field">
-                <span className="outline-composer__eyebrow">Topic</span>
-                <input
-                    type="text"
-                    value={outlineTopic}
-                    onChange={(event) => setOutlineTopic(event.target.value)}
-                    disabled={isRunning}
+            <div className="outline-composer__header">
+                <label className="outline-composer__field outline-composer__field--main">
+                    <span className="outline-composer__eyebrow">Topic</span>
+                    <input
+                        type="text"
+                        value={outlineTopic}
+                        onChange={(event) => setOutlineTopic(event.target.value)}
+                        disabled={isRunning}
+                    />
+                </label>
+                <RefineToggle
+                    avoidTopics={avoidTopics}
+                    setAvoidTopics={setAvoidTopics}
+                    includeTopics={includeTopics}
+                    setIncludeTopics={setIncludeTopics}
+                    isRunning={isRunning}
                 />
-            </label>
+            </div>
             <div className="outline-format-toggle" role="tablist" aria-label="Outline input format">
                 {OUTLINE_INPUT_MODES.map((option) => (
                     <button
@@ -47,8 +61,8 @@ export function OutlineForm({
                         role="tab"
                         aria-selected={outlineInputMode === option.value}
                         className={`outline-format-toggle__option${outlineInputMode === option.value
-                                ? " outline-format-toggle__option--active"
-                                : ""
+                            ? " outline-format-toggle__option--active"
+                            : ""
                             }`}
                         onClick={() => !isRunning && setOutlineInputMode(option.value)}
                     >

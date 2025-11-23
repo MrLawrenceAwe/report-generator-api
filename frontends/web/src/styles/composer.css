@@ -220,3 +220,79 @@
         width: 100%;
     }
 }
+
+.composer-refine {
+    display: flex;
+    gap: var(--space-3);
+    width: min(720px, 100%);
+    margin-top: var(--space-2);
+}
+
+.composer-refine input {
+    flex: 1;
+    background: var(--glass-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    backdrop-filter: var(--backdrop-blur);
+    transition: all var(--transition-fast);
+}
+
+.composer-refine input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    background: var(--color-bg-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 640px) {
+    .composer-refine {
+        flex-direction: column;
+        padding: 0 var(--space-2);
+    }
+}
+
+.composer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+}
+
+.composer__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.composer__footer-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+/* Override composer button styles for refine toggle */
+.composer .refine-toggle__button {
+    background: transparent;
+    border: none;
+    padding: var(--space-2) var(--space-1);
+    height: auto;
+    color: var(--color-text-tertiary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 0;
+}
+
+.composer .refine-toggle__button:hover {
+    background: transparent;
+    color: var(--color-text-secondary);
+    transform: none;
+    box-shadow: none;
+}
+
+.composer .refine-toggle__button:active {
+    transform: none;
+    opacity: 1;
+}

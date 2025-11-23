@@ -1,5 +1,6 @@
 import { SectionCountSelector } from './SectionCountSelector';
 import { ModelOverrideToggle } from './ModelOverrideToggle';
+import { RefineToggle } from './RefineToggle';
 
 export function TopicView({
     topic,
@@ -21,6 +22,10 @@ export function TopicView({
     editorRef,
     selectToggleRef,
     suggestionsRef,
+    avoidTopics,
+    setAvoidTopics,
+    includeTopics,
+    setIncludeTopics,
 }) {
     const {
         startEditing,
@@ -99,28 +104,39 @@ export function TopicView({
                 </button>
             </header>
             <div className="topic-view__actions">
-                <SectionCountSelector
-                    value={sectionCount}
-                    onChange={setSectionCount}
-                    disabled={isRunning}
-                />
-                <ModelOverrideToggle
-                    isRunning={isRunning}
-                    stageModels={stageModels}
-                    onStageModelChange={onStageModelChange}
-                    selectedPreset={selectedPreset}
-                    onPresetSelect={onPresetSelect}
-                    presetLabel={presetLabel}
-                    idPrefix="topicview"
-                />
-                <button
-                    type="button"
-                    className="topic-view__generate"
-                    onClick={handleGenerate}
-                    disabled={isRunning}
-                >
-                    {isRunning ? "Working…" : "Generate Report"}
-                </button>
+                <div className="topic-view__refine-row">
+                    <RefineToggle
+                        avoidTopics={avoidTopics}
+                        setAvoidTopics={setAvoidTopics}
+                        includeTopics={includeTopics}
+                        setIncludeTopics={setIncludeTopics}
+                        isRunning={isRunning}
+                    />
+                </div>
+                <div className="topic-view__actions-row">
+                    <SectionCountSelector
+                        value={sectionCount}
+                        onChange={setSectionCount}
+                        disabled={isRunning}
+                    />
+                    <ModelOverrideToggle
+                        isRunning={isRunning}
+                        stageModels={stageModels}
+                        onStageModelChange={onStageModelChange}
+                        selectedPreset={selectedPreset}
+                        onPresetSelect={onPresetSelect}
+                        presetLabel={presetLabel}
+                        idPrefix="topicview"
+                    />
+                    <button
+                        type="button"
+                        className="topic-view__generate"
+                        onClick={handleGenerate}
+                        disabled={isRunning}
+                    >
+                        {isRunning ? "Working…" : "Generate Report"}
+                    </button>
+                </div>
             </div>
             <p className="topic-view__description">
                 Explore topics related to <strong>{topic}</strong>.

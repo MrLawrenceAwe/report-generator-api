@@ -17,6 +17,8 @@ export function useTopicView({
     const [selectedSuggestions, setSelectedSuggestions] = useState([]);
     const [topicSelectMode, setTopicSelectMode] = useState(false);
     const [suggestionsPaused, setSuggestionsPaused] = useState(false);
+    const [avoidTopics, setAvoidTopics] = useState("");
+    const [includeTopics, setIncludeTopics] = useState("");
     const topicSelectToggleRef = useRef(null);
     const topicSuggestionsRef = useRef(null);
     const topicViewEditorRef = useRef(null);
@@ -74,6 +76,8 @@ export function useTopicView({
         setSelectedSuggestions([]);
         setTopicSelectMode(false);
         setSuggestionsPaused(false);
+        setAvoidTopics("");
+        setIncludeTopics("");
     }, []);
 
     const startTopicEditing = useCallback(() => {
@@ -145,8 +149,10 @@ export function useTopicView({
     const handleTopicViewGenerate = useCallback(async () => {
         if (!topicViewTopic || isRunning) return;
         closeTopicView();
-        await runTopicPrompt(topicViewTopic);
-    }, [closeTopicView, isRunning, runTopicPrompt, topicViewTopic]);
+        const avoid = avoidTopics.split(",").map(s => s.trim()).filter(Boolean);
+        const include = includeTopics.split(",").map(s => s.trim()).filter(Boolean);
+        await runTopicPrompt(topicViewTopic, { avoid, include });
+    }, [closeTopicView, isRunning, runTopicPrompt, topicViewTopic, avoidTopics, includeTopics]);
 
     const handleTopicViewSave = useCallback(() => {
         if (!topicViewTopic) return;
@@ -233,6 +239,11 @@ export function useTopicView({
         handleSuggestionToggle,
         handleSaveSelectedSuggestions,
         handleRefreshSuggestions,
+        handleRefreshSuggestions,
         handleToggleTopicSelectMode,
+        avoidTopics,
+        setAvoidTopics,
+        includeTopics,
+        setIncludeTopics,
     };
 }

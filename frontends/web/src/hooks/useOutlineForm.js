@@ -11,10 +11,15 @@ export function buildOutlinePayload({
     outlineSections,
     outlineJsonInput,
     models,
+    avoidTopics,
+    includeTopics,
 }) {
     let outlineBrief = "";
     let userSummary = "";
     let outlineGeneratePayload = null;
+
+    const subject_exclusions = (avoidTopics || "").split(",").map(s => s.trim()).filter(Boolean);
+    const subject_inclusions = (includeTopics || "").split(",").map(s => s.trim()).filter(Boolean);
 
     if (outlineInputMode === "lines") {
         const normalizedSections = outlineSections
@@ -46,6 +51,8 @@ export function buildOutlinePayload({
             normalizedSections,
             models
         );
+        outlineGeneratePayload.subject_exclusions = subject_exclusions;
+        outlineGeneratePayload.subject_inclusions = subject_inclusions;
     } else {
         const trimmedInput = outlineJsonInput.trim();
         if (!trimmedInput) {
@@ -89,6 +96,8 @@ export function buildOutlinePayload({
             normalizedJsonSections,
             models
         );
+        outlineGeneratePayload.subject_exclusions = subject_exclusions;
+        outlineGeneratePayload.subject_inclusions = subject_inclusions;
     }
 
     return {
@@ -106,6 +115,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
     ]);
     const [outlineJsonInput, setOutlineJsonInput] = useState(DEFAULT_OUTLINE_JSON);
     const [outlineError, setOutlineError] = useState("");
+    const [avoidTopics, setAvoidTopics] = useState("");
+    const [includeTopics, setIncludeTopics] = useState("");
 
     const clearOutlineError = useCallback(() => setOutlineError(""), []);
 
@@ -114,6 +125,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
         setOutlineTopic("");
         setOutlineSections([createEmptyOutlineSection()]);
         setOutlineJsonInput(DEFAULT_OUTLINE_JSON);
+        setAvoidTopics("");
+        setIncludeTopics("");
     }, [clearOutlineError]);
 
     const handleAddOutlineSection = useCallback(() => {
@@ -190,6 +203,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
                 outlineSections,
                 outlineJsonInput,
                 models,
+                avoidTopics,
+                includeTopics,
             });
 
             if (error) {
@@ -231,6 +246,8 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
             outlineTopic,
             onGenerate,
             models,
+            avoidTopics,
+            includeTopics,
         ]
     );
 
@@ -268,5 +285,9 @@ export function useOutlineForm({ isRunning, appendMessage, onGenerate, models })
         handleAddSubsectionLine,
         handleRemoveSubsectionLine,
         handleOutlineSubmit,
+        avoidTopics,
+        setAvoidTopics,
+        includeTopics,
+        setIncludeTopics,
     };
 }

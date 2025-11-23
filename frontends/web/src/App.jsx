@@ -43,6 +43,8 @@ function App() {
   const [topicViewBarValue, setTopicViewBarValue] = useState("");
   const [mode, setMode] = useState("topic");
   const [sectionCount, setSectionCount] = useState(3);
+  const [chatAvoidTopics, setChatAvoidTopics] = useState("");
+  const [chatIncludeTopics, setChatIncludeTopics] = useState("");
 
   const {
     modelPresets,
@@ -293,6 +295,10 @@ function App() {
     handleSaveSelectedSuggestions,
     handleRefreshSuggestions,
     handleToggleTopicSelectMode,
+    avoidTopics,
+    setAvoidTopics,
+    includeTopics,
+    setIncludeTopics,
   } = useTopicView({
     apiBase,
     suggestionModel,
@@ -356,6 +362,10 @@ function App() {
     handleAddSubsectionLine,
     handleRemoveSubsectionLine,
     handleOutlineSubmit,
+    avoidTopics: outlineAvoidTopics,
+    setAvoidTopics: setOutlineAvoidTopics,
+    includeTopics: outlineIncludeTopics,
+    setIncludeTopics: setOutlineIncludeTopics,
   } = useOutlineForm({
     isRunning,
     appendMessage,
@@ -386,9 +396,13 @@ function App() {
       const prompt = composerValue.trim();
       if (!prompt || isRunning) return;
       setComposerValue("");
-      await runTopicPrompt(prompt);
+      const avoid = chatAvoidTopics.split(",").map(s => s.trim()).filter(Boolean);
+      const include = chatIncludeTopics.split(",").map(s => s.trim()).filter(Boolean);
+      await runTopicPrompt(prompt, { avoid, include });
+      setChatAvoidTopics("");
+      setChatIncludeTopics("");
     },
-    [composerValue, isRunning, runTopicPrompt]
+    [composerValue, isRunning, runTopicPrompt, chatAvoidTopics, chatIncludeTopics]
   );
 
   const handleTopicViewBarSubmit = useCallback(
@@ -543,6 +557,10 @@ function App() {
               setSectionCount,
             }}
             editorRef={topicViewEditorRef}
+            avoidTopics={avoidTopics}
+            setAvoidTopics={setAvoidTopics}
+            includeTopics={includeTopics}
+            setIncludeTopics={setIncludeTopics}
           />
         ) : isReportViewOpen ? (
           <ReportView
@@ -595,6 +613,10 @@ function App() {
                   handleAddSubsection: handleAddSubsectionLine,
                   handleRemoveSubsection: handleRemoveSubsectionLine,
                 }}
+                avoidTopics={outlineAvoidTopics}
+                setAvoidTopics={setOutlineAvoidTopics}
+                includeTopics={outlineIncludeTopics}
+                setIncludeTopics={setOutlineIncludeTopics}
               />
             }
             stageModels={stageModels}
@@ -603,6 +625,10 @@ function App() {
             onPresetSelect={handlePresetSelect}
             hideComposer={isRunning}
             onViewReport={handleReportOpen}
+            avoidTopics={chatAvoidTopics}
+            setAvoidTopics={setChatAvoidTopics}
+            includeTopics={chatIncludeTopics}
+            setIncludeTopics={setChatIncludeTopics}
           />
         )}
       </main>

@@ -364,3 +364,34 @@
         width: 100%;
     }
 }
+.outline-composer__row {
+    display: flex;
+    gap: var(--space-4);
+}
+
+.outline-composer__row .outline-composer__field {
+    flex: 1;
+}
+
+@media (max-width: 640px) {
+    .outline-composer__row {
+        flex-direction: column;
+    }
+}
+
+.outline-composer__header {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-4);
+}
+
+.outline-composer__field--main {
+    flex: 1;
+}
+
+@media (max-width: 640px) {
+    .outline-composer__header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
