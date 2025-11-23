@@ -244,13 +244,6 @@
 .outline-add-button--section {
     align-self: flex-end;
     margin-left: 0;
-    background: var(--color-accent-primary);
-    color: #ffffff;
-}
-
-.outline-add-button--section:hover {
-    background: var(--color-accent-hover);
-    color: #ffffff;
 }
 
 .outline-json-block {

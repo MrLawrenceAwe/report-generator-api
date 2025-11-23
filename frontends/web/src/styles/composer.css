@@ -72,7 +72,7 @@
     outline: none;
 }
 
-.composer button {
+.composer button:not(.button-generate):not(.refine-toggle__button) {
     border: none;
     border-radius: var(--radius-full);
     padding: var(--space-2) var(--space-5);
@@ -89,18 +89,18 @@
     /* Fixed height for alignment */
 }
 
-.composer button:hover {
+.composer button:not(.button-generate):not(.refine-toggle__button):hover {
     background: var(--color-accent-hover);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
 
-.composer button:active {
+.composer button:not(.button-generate):not(.refine-toggle__button):active {
     transform: translateY(0);
     opacity: 0.9;
 }
 
-.composer button:disabled {
+.composer button:not(.button-generate):not(.refine-toggle__button):disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
