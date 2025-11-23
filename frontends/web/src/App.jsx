@@ -5,8 +5,10 @@ import { useSettings } from './hooks/useSettings';
 import { usePersistence } from './hooks/usePersistence';
 import { useExplore } from './hooks/useExplore';
 import { useTopicView } from './hooks/useTopicView';
+
 import { useGeneration } from './hooks/useGeneration';
 import { Sidebar } from './components/Sidebar';
+import { ChatPane } from './components/ChatPane';
 import { TopicView } from './components/TopicView';
 import { OutlineForm } from './components/OutlineForm';
 import { ReportView } from './components/ReportView';
