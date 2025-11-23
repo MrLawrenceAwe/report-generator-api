@@ -47,7 +47,7 @@ export function RefineToggle({
             {open && (
                 <div className="refine-popover" ref={popoverRef}>
                     <div className="refine-field">
-                        <label className="refine-field__label">Avoid Topics</label>
+                        <label className="refine-field__label">Avoid</label>
                         <input
                             className="refine-field__input"
                             placeholder="e.g. politics, sports"
@@ -57,7 +57,7 @@ export function RefineToggle({
                         />
                     </div>
                     <div className="refine-field">
-                        <label className="refine-field__label">Include Topics</label>
+                        <label className="refine-field__label">Include</label>
                         <input
                             className="refine-field__input"
                             placeholder="e.g. history, science"
