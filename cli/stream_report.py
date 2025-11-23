@@ -75,12 +75,12 @@ def parse_args() -> argparse.Namespace:
         help="Avoid this subject entirely. Pass multiple times for multiple subjects.",
     )
     parser.add_argument(
-        "--owner-email",
+        "--user-email",
         help="Email used to associate the generated artifacts with a user profile.",
     )
     parser.add_argument(
-        "--owner-username",
-        help="Username to store for the owner when --owner-email is provided (required whenever an owner email is supplied).",
+        "--username",
+        help="Username to store for the user when --user-email is provided (required whenever a user email is supplied).",
     )
     return parser.parse_args()
 
@@ -151,16 +151,16 @@ def _apply_generation_options(
     return merged_payload
 
 
-def _apply_owner_metadata(
+def _apply_user_metadata(
     payload: Dict[str, Any],
-    owner_email: Optional[str],
-    owner_username: Optional[str],
+    user_email: Optional[str],
+    username: Optional[str],
 ) -> Dict[str, Any]:
     merged = dict(payload)
-    if owner_email:
-        merged["owner_email"] = owner_email
-    if owner_username:
-        merged["owner_username"] = owner_username
+    if user_email:
+        merged["user_email"] = user_email
+    if username:
+        merged["username"] = username
     return merged
 
 
@@ -178,8 +178,8 @@ def load_payload(
     sections: int | None = None,
     subject_inclusions: Optional[List[str]] = None,
     subject_exclusions: Optional[List[str]] = None,
-    owner_email: Optional[str] = None,
-    owner_username: Optional[str] = None,
+    user_email: Optional[str] = None,
+    username: Optional[str] = None,
 ) -> Dict[str, Any]:
     if payload_file is not None:
         data = _load_json_mapping(payload_file)
@@ -189,9 +189,9 @@ def load_payload(
             subject_inclusions,
             subject_exclusions,
         )
-        payload = _apply_owner_metadata(payload, owner_email, owner_username)
+        payload = _apply_user_metadata(payload, user_email, username)
         validated = _validate_generate_payload(payload)
-        _enforce_owner_metadata_requirements(validated, owner_email=owner_email)
+        _enforce_user_metadata_requirements(validated, user_email=user_email)
         return validated
 
     if topic is None:
@@ -203,23 +203,23 @@ def load_payload(
         subject_inclusions,
         subject_exclusions,
     )
-    payload = _apply_owner_metadata(payload, owner_email, owner_username)
+    payload = _apply_user_metadata(payload, user_email, username)
     validated = _validate_generate_payload(payload)
-    _enforce_owner_metadata_requirements(validated, owner_email=owner_email)
+    _enforce_user_metadata_requirements(validated, user_email=user_email)
     return validated
 
 
-def _enforce_owner_metadata_requirements(
+def _enforce_user_metadata_requirements(
     payload: Dict[str, Any],
     *,
-    owner_email: Optional[str],
+    user_email: Optional[str],
 ) -> None:
-    # Topics provided via CLI defaults represent interactive runs where we expect explicit owner metadata.
+    # Topics provided via CLI defaults represent interactive runs where we expect explicit user metadata.
     # Outline-driven payloads (with pre-supplied outlines) may be auto-generated system runs and remain optional.
     has_outline = isinstance(payload.get("outline"), dict)
-    if not has_outline and owner_email:
-        if not payload.get("owner_username"):
-            raise SystemExit("--owner-username must accompany --owner-email when override flags are provided.")
+    if not has_outline and user_email:
+        if not payload.get("username"):
+            raise SystemExit("--username must accompany --user-email when override flags are provided.")
 
 
 def _prepare_final_report(final_event: Dict[str, Any]) -> str:
@@ -326,8 +326,8 @@ def main() -> None:
         sections=args.sections,
         subject_inclusions=subject_inclusions,
         subject_exclusions=subject_exclusions,
-        owner_email=args.owner_email,
-        owner_username=args.owner_username,
+        user_email=args.user_email,
+        username=args.username,
     )
 
     inferred_topic = _infer_topic(payload)

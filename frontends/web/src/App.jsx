@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useChat } from './hooks/useChat';
 import { useOutlineForm } from './hooks/useOutlineForm';
 import { useSettings } from './hooks/useSettings';
@@ -12,13 +12,17 @@ import { OutlineForm } from './components/OutlineForm';
 import { ReportView } from './components/ReportView';
 import {
   loadApiBase,
-  loadSavedList,
-  SAVED_TOPICS_KEY,
-  SAVED_REPORTS_KEY,
   MAX_SAVED_TOPICS,
   MAX_SAVED_REPORTS,
   summarizeReport,
   MODEL_PRESET_LABELS,
+  loadUserProfile,
+  persistUserProfile,
+  fetchSavedTopics,
+  createSavedTopic,
+  deleteSavedTopic,
+  fetchSavedReports,
+  deleteSavedReport,
 } from './utils/helpers';
 
 import { ExploreSuggestions } from './components/ExploreSuggestions';
@@ -26,8 +30,11 @@ import { SettingsModal } from './components/SettingsModal';
 
 function App() {
   const [apiBase] = useState(loadApiBase);
-  const [savedTopics, setSavedTopics] = useState(() => loadSavedList(SAVED_TOPICS_KEY));
-  const [savedReports, setSavedReports] = useState(() => loadSavedList(SAVED_REPORTS_KEY));
+  const [user, setUser] = useState(loadUserProfile);
+  const [savedTopics, setSavedTopics] = useState([]);
+  const [savedReports, setSavedReports] = useState([]);
+  const [isSyncingSaved, setIsSyncingSaved] = useState(false);
+  const [savedError, setSavedError] = useState(null);
   const [activeReport, setActiveReport] = useState(null);
   const [composerValue, setComposerValue] = useState("");
   const [topicViewBarValue, setTopicViewBarValue] = useState("");
@@ -52,33 +59,107 @@ function App() {
   } = useSettings();
 
   usePersistence({
-    savedTopics,
-    savedReports,
     modelPresets,
     defaultPreset,
     suggestionModel,
   });
 
-  const rememberReport = useCallback((topic, content, title) => {
+  useEffect(() => {
+    persistUserProfile(user);
+  }, [user]);
+
+  const loadTopics = useCallback(async () => {
+    if (!user.email) {
+      setSavedTopics([]);
+      return;
+    }
+    const topics = await fetchSavedTopics(apiBase, user);
+    setSavedTopics(topics.slice(0, MAX_SAVED_TOPICS));
+  }, [apiBase, user]);
+
+  const loadReports = useCallback(async () => {
+    if (!user.email) {
+      setSavedReports([]);
+      return;
+    }
+    const reports = await fetchSavedReports(apiBase, user, { includeContent: true });
+    setSavedReports(reports.slice(0, MAX_SAVED_REPORTS));
+  }, [apiBase, user]);
+
+  const refreshSavedData = useCallback(async () => {
+    if (!user.email) {
+      setSavedTopics([]);
+      setSavedReports([]);
+      setSavedError(null);
+      setIsSyncingSaved(false);
+      return;
+    }
+    setIsSyncingSaved(true);
+    try {
+      await Promise.all([loadTopics(), loadReports()]);
+      setSavedError(null);
+    } catch (error) {
+      setSavedError(error.message || "Failed to sync saved items.");
+    } finally {
+      setIsSyncingSaved(false);
+    }
+  }, [loadReports, loadTopics, user.email]);
+
+  useEffect(() => {
+    refreshSavedData();
+  }, [refreshSavedData]);
+
+  const rememberReport = useCallback(async (topic, content, title) => {
     const safeContent = content || "";
     const normalizedTitle = (title || topic || "Explorer Report").trim() || "Explorer Report";
     const normalizedTopic = (topic || normalizedTitle).trim();
     const summary = summarizeReport(safeContent || normalizedTitle);
-    setSavedReports((current) => [
-      {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        topic: normalizedTopic,
-        title: normalizedTitle,
-        content: safeContent,
-        preview: summary,
-      },
-      ...current,
-    ].slice(0, MAX_SAVED_REPORTS));
-  }, [setSavedReports]);
+    if (!user.email) {
+      setSavedReports((current) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          topic: normalizedTopic,
+          title: normalizedTitle,
+          content: safeContent,
+          preview: summary,
+        },
+        ...current,
+      ].slice(0, MAX_SAVED_REPORTS));
+      return;
+    }
+    try {
+      await loadReports();
+      setSavedError(null);
+    } catch (error) {
+      console.error("Failed to refresh reports", error);
+      setSavedReports((current) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          topic: normalizedTopic,
+          title: normalizedTitle,
+          content: safeContent,
+          preview: summary,
+        },
+        ...current,
+      ].slice(0, MAX_SAVED_REPORTS));
+      setSavedError(error.message || "Failed to refresh saved reports.");
+    }
+  }, [loadReports, user.email, setSavedReports]);
 
-  const forgetReport = useCallback((id) => {
-    setSavedReports((current) => current.filter((entry) => entry.id !== id));
-  }, []);
+  const forgetReport = useCallback(async (id) => {
+    if (!id) return;
+    if (!user.email) {
+      setSavedReports((current) => current.filter((entry) => entry.id !== id));
+      return;
+    }
+    try {
+      await deleteSavedReport(apiBase, user, id);
+      setSavedReports((current) => current.filter((entry) => entry.id !== id));
+    } catch (error) {
+      console.error("Failed to delete report", error);
+      setSavedError(error.message || "Failed to delete report.");
+    }
+  }, [apiBase, user]);
 
   const {
     messages,
@@ -90,31 +171,65 @@ function App() {
     stopGeneration,
   } = useChat(apiBase, rememberReport);
 
-  const rememberTopics = useCallback((prompts) => {
+  const rememberTopics = useCallback(async (prompts) => {
     const normalizedPrompts = (Array.isArray(prompts) ? prompts : [prompts])
       .map((entry) => (entry || "").trim())
       .filter(Boolean);
     if (!normalizedPrompts.length) return;
-    setSavedTopics((current) => {
-      const deduped = current.filter(
-        (entry) => !normalizedPrompts.includes(entry.prompt)
+    if (!user.email) {
+      setSavedError("Set a user email in Settings to save topics.");
+      return;
+    }
+    try {
+      const created = await Promise.all(
+        normalizedPrompts.map((prompt) =>
+          createSavedTopic(apiBase, user, prompt).catch((error) => {
+            console.error("Failed to save topic", prompt, error);
+            return null;
+          })
+        )
       );
-      const newEntries = normalizedPrompts.map((prompt) => ({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        prompt,
-      }));
-      return [...newEntries, ...deduped].slice(0, MAX_SAVED_TOPICS);
-    });
-  }, []);
+      const valid = created.filter(Boolean);
+      if (valid.length) {
+        setSavedTopics((current) => {
+          const existingIds = new Set(current.map((entry) => entry.id));
+          const merged = [
+            ...valid.filter((topic) => !existingIds.has(topic.id)),
+            ...current.filter(
+              (entry) => !valid.some((topic) => topic.prompt === entry.prompt)
+            ),
+          ];
+          return merged.slice(0, MAX_SAVED_TOPICS);
+        });
+      } else {
+        await loadTopics();
+      }
+      setSavedError(null);
+    } catch (error) {
+      setSavedError(error.message || "Failed to save topics.");
+    }
+  }, [apiBase, loadTopics, user]);
 
   const rememberTopic = useCallback(
     (prompt) => rememberTopics([prompt]),
     [rememberTopics]
   );
 
-  const forgetTopic = useCallback((id) => {
-    setSavedTopics((current) => current.filter((entry) => entry.id !== id));
-  }, []);
+  const forgetTopic = useCallback(async (id) => {
+    if (!id) return;
+    if (!user.email) {
+      setSavedTopics((current) => current.filter((entry) => entry.id !== id));
+      return;
+    }
+    try {
+      await deleteSavedTopic(apiBase, user, id);
+      setSavedTopics((current) => current.filter((entry) => entry.id !== id));
+      setSavedError(null);
+    } catch (error) {
+      console.error("Failed to delete topic", error);
+      setSavedError(error.message || "Failed to delete topic.");
+    }
+  }, [apiBase, user]);
 
   const runTopicPrompt = useCallback(
     async (prompt) => {
@@ -146,6 +261,8 @@ function App() {
             return: "report_with_outline",
             sections: sectionCount || undefined,
             models: modelsPayload,
+            user_email: user.email || undefined,
+            username: user.username || undefined,
           },
           assistantId,
           normalizedPrompt
@@ -155,7 +272,7 @@ function App() {
         setIsRunning(false);
       }
     },
-    [appendMessage, isRunning, modelsPayload, rememberTopic, runReportFlow, sectionCount, setActiveReport, setIsRunning]
+    [appendMessage, isRunning, modelsPayload, user.email, user.username, rememberTopic, runReportFlow, sectionCount, setActiveReport, setIsRunning]
   );
 
   const {
@@ -266,8 +383,13 @@ function App() {
     onGenerate: async (payload, assistantId, topicText) => {
       setActiveReport(null);
       setIsRunning(true);
+      const payloadWithUser = {
+        ...payload,
+        user_email: user.email || undefined,
+        username: user.username || undefined,
+      };
       const wasSuccessful = await runReportFlow(
-        payload,
+        payloadWithUser,
         assistantId,
         topicText
       );
@@ -384,6 +506,8 @@ function App() {
           setMessages([]);
           setMode("topic");
         }}
+        isSyncing={isSyncingSaved}
+        savedError={savedError}
       />
       <main className={chatPaneClassName}>
         {shouldShowExplore && (
@@ -510,6 +634,8 @@ function App() {
         onPresetModelChange={handlePresetModelChange}
         suggestionModel={suggestionModel}
         onSuggestionModelChange={handleSuggestionModelChange}
+        user={user}
+        onUserChange={setUser}
       />
     </div>
   );

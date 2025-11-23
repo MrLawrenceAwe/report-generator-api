@@ -139,27 +139,27 @@ def test_outline_service_build_outline_request_rejects_blank_topic():
     assert "non-whitespace" in str(excinfo.value)
 
 
-def test_generate_request_requires_owner_username_with_owner_email():
+def test_generate_request_requires_username_with_user_email():
     with pytest.raises(ValidationError) as excinfo:
         GenerateRequest.model_validate(
             {
                 "topic": "Quantum Computing",
                 "mode": "generate_report",
-                "owner_email": "owner@example.com",
+                "user_email": "user@example.com",
             }
         )
 
-    assert "owner_username" in str(excinfo.value)
+    assert "username" in str(excinfo.value)
 
 
-def test_generate_request_strips_owner_username():
+def test_generate_request_strips_username():
     request = GenerateRequest.model_validate(
         {
             "topic": "Quantum Computing",
             "mode": "generate_report",
-            "owner_email": "owner@example.com",
-            "owner_username": "  Owner Name ",
+            "user_email": "user@example.com",
+            "username": "  User Name ",
         }
     )
 
-    assert request.owner_username == "Owner Name"
+    assert request.username == "User Name"

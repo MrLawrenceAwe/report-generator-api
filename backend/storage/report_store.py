@@ -30,9 +30,9 @@ _DEFAULT_DB_URL = "sqlite:///reportgen.db"
 _DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"
 _DEFAULT_STORAGE_ENV = "EXPLORER_REPORT_STORAGE_DIR"
 _DEFAULT_STORAGE_DIR = "data/reports"
-_DEFAULT_OWNER_EMAIL_ENV = "EXPLORER_DEFAULT_OWNER_EMAIL"
-_SYSTEM_OWNER_EMAIL = "system@explorer.local"
-_SYSTEM_OWNER_USERNAME = "Explorer System"
+_DEFAULT_USER_EMAIL_ENV = "EXPLORER_DEFAULT_USER_EMAIL"
+_SYSTEM_USER_EMAIL = "system@explorer.local"
+_SYSTEM_USERNAME = "Explorer System"
 
 _SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 _TOPIC_RETRY_LIMIT = 3
@@ -63,9 +63,9 @@ class GeneratedReportStore:
         self.base_dir = Path(configured_base).expanduser().resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self._session_factory = session_factory or _create_default_session_factory()
-        self._default_owner_email = os.environ.get(
-            _DEFAULT_OWNER_EMAIL_ENV,
-            _SYSTEM_OWNER_EMAIL,
+        self._default_user_email = os.environ.get(
+            _DEFAULT_USER_EMAIL_ENV,
+            _SYSTEM_USER_EMAIL,
         )
 
     def prepare_report(self, request: GenerateRequest, outline: Outline) -> StoredReportHandle:
@@ -77,15 +77,15 @@ class GeneratedReportStore:
             handle: Optional[StoredReportHandle] = None
             try:
                 with session_scope(self._session_factory) as session:
-                    owner_email = request.owner_email or self._default_owner_email
-                    if request.owner_email:
-                        owner_username = request.owner_username
+                    user_email = request.user_email or self._default_user_email
+                    if request.user_email:
+                        username = request.username
                     else:
-                        owner_username = request.owner_username or _SYSTEM_OWNER_USERNAME
+                        username = request.username or _SYSTEM_USERNAME
                     user = self._get_or_create_user(
                         session,
-                        owner_email,
-                        owner_username,
+                        user_email,
+                        username,
                     )
                     saved_topic = self._get_or_create_saved_topic(
                         session,
@@ -173,9 +173,9 @@ class GeneratedReportStore:
         user = session.scalar(select(User).where(User.email == email))
         if user:
             if username:
-                if not user.full_name or user.full_name == _SYSTEM_OWNER_USERNAME:
+                if not user.full_name or user.full_name == _SYSTEM_USERNAME:
                     user.full_name = username
-                if not user.username or user.username == _SYSTEM_OWNER_USERNAME:
+                if not user.username or user.username == _SYSTEM_USERNAME:
                     user.username = username
             return user
         user = User(email=email, full_name=username, username=username)

@@ -85,13 +85,13 @@ class GenerateRequest(SubjectFilters):
     topic: Optional[str] = None
     mode: Optional[Literal["generate_report"]] = None
     outline: Optional[Outline] = None
-    owner_email: Optional[str] = Field(
+    user_email: Optional[str] = Field(
         default=None,
         description="Email used to associate generated reports with a user profile.",
     )
-    owner_username: Optional[str] = Field(
+    username: Optional[str] = Field(
         default=None,
-        description="Optional username stored with the owning user record.",
+        description="Optional username stored with the user record.",
     )
     models: Dict[str, ModelSpec] = Field(
         default_factory=lambda: {
@@ -112,17 +112,17 @@ class GenerateRequest(SubjectFilters):
             self.topic = topic
             if self.mode != "generate_report":
                 raise ValueError("When generating from a topic, mode must be 'generate_report'.")
-        if self.owner_email is not None:
-            email = self.owner_email.strip()
+        if self.user_email is not None:
+            email = self.user_email.strip()
             if not email:
-                raise ValueError("owner_email must contain non-whitespace characters when provided.")
-            self.owner_email = email
-            if self.owner_username is None or not self.owner_username.strip():
-                raise ValueError("Provide owner_username when owner_email is supplied.")
-            self.owner_username = self.owner_username.strip()
-        elif self.owner_username is not None:
-            normalized = self.owner_username.strip()
-            self.owner_username = normalized or None
+                raise ValueError("user_email must contain non-whitespace characters when provided.")
+            self.user_email = email
+            if self.username is None or not self.username.strip():
+                raise ValueError("Provide username when user_email is supplied.")
+            self.username = self.username.strip()
+        elif self.username is not None:
+            normalized = self.username.strip()
+            self.username = normalized or None
         return self
 
 

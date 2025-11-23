@@ -1,4 +1,5 @@
 .venv/
+.env
 TODO.md
 cli/generated_reports/
 .DS_Store

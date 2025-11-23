@@ -90,6 +90,58 @@
     border-color: var(--color-text-muted);
 }
 
+.settings-panel__section {
+    margin-bottom: var(--space-5);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-base);
+}
+
+.settings-panel__section-header {
+    margin-bottom: var(--space-3);
+}
+
+.settings-panel__section-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.settings-panel__hint {
+    margin: var(--space-1) 0 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+.settings-panel__fields {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.settings-panel__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    color: var(--color-text-primary);
+    font-size: 0.95rem;
+}
+
+.settings-panel__field input {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    padding: var(--space-3);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+}
+
+.settings-panel__field input:focus {
+    outline: 2px solid var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+}
+
 .model-settings {
     display: flex;
     flex-direction: column;

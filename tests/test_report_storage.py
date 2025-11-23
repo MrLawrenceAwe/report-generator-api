@@ -36,8 +36,8 @@ def test_generated_report_store_persists_artifacts(tmp_path: Path):
         {
             "topic": "Solar energy expansion",
             "mode": "generate_report",
-            "owner_email": "owner@example.com",
-            "owner_username": "owner-example",
+            "user_email": "user@example.com",
+            "username": "user-example",
         }
     )
 
@@ -102,16 +102,16 @@ def test_prepare_report_marks_failed_when_outline_snapshot_write_breaks(tmp_path
         assert report is None
 
 
-def test_prepare_report_uses_owner_username_for_custom_users(tmp_path: Path):
+def test_prepare_report_uses_username_for_custom_users(tmp_path: Path):
     session_factory = _session_factory()
     store = GeneratedReportStore(base_dir=tmp_path / "reports", session_factory=session_factory)
-    outline = Outline(report_title="Custom Owner", sections=[])
+    outline = Outline(report_title="Custom User", sections=[])
     request = GenerateRequest.model_validate(
         {
-            "topic": "Custom owner topic",
+            "topic": "Custom user topic",
             "mode": "generate_report",
-            "owner_email": "custom@example.com",
-            "owner_username": "Custom Owner",
+            "user_email": "custom@example.com",
+            "username": "Custom User",
         }
     )
 
@@ -119,16 +119,16 @@ def test_prepare_report_uses_owner_username_for_custom_users(tmp_path: Path):
     with session_scope(session_factory) as session:
         user = session.get(User, handle.owner_user_id)
         assert user is not None
-        assert user.full_name == "Custom Owner"
-        assert user.username == "Custom Owner"
+        assert user.full_name == "Custom User"
+        assert user.username == "Custom User"
 
 
 def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
     session_factory = _session_factory()
     store = GeneratedReportStore(base_dir=tmp_path / "reports", session_factory=session_factory)
-    outline = Outline(report_title="Rename Owner", sections=[])
+    outline = Outline(report_title="Rename User", sections=[])
 
-    placeholder_email = "owner@example.com"
+    placeholder_email = "user@example.com"
     with session_scope(session_factory) as session:
         user = User(email=placeholder_email, full_name="Explorer System", username="Explorer System")
         session.add(user)
@@ -138,8 +138,8 @@ def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
         {
             "topic": "Renaming topic",
             "mode": "generate_report",
-            "owner_email": placeholder_email,
-            "owner_username": "Real Owner",
+            "user_email": placeholder_email,
+            "username": "Real User",
         }
     )
 
@@ -148,8 +148,8 @@ def test_prepare_report_replaces_placeholder_names(tmp_path: Path):
     with session_scope(session_factory) as session:
         user = session.scalar(select(User).where(User.email == placeholder_email))
         assert user is not None
-        assert user.full_name == "Real Owner"
-        assert user.username == "Real Owner"
+        assert user.full_name == "Real User"
+        assert user.username == "Real User"
 
 
 def _fetch_saved_topic(session_factory, report_id):

@@ -68,6 +68,16 @@
     color: var(--color-text-primary);
 }
 
+.sidebar__status {
+    margin: var(--space-2) 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+.sidebar__status--error {
+    color: var(--color-danger, #c62828);
+}
+
 .sidebar__explore-button {
     width: 100%;
     padding: var(--space-3) var(--space-4);

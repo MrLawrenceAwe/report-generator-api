@@ -13,6 +13,8 @@ export function Sidebar({
     onOpenSettings,
     onReportSelect,
     onResetExplore,
+    isSyncing,
+    savedError,
 }) {
     const [topicsCollapsed, setTopicsCollapsed] = useState(false);
     const [reportsCollapsed, setReportsCollapsed] = useState(false);
@@ -35,6 +37,11 @@ export function Sidebar({
             <button type="button" className="sidebar__settings-button" onClick={onOpenSettings}>
                 Settings
             </button>
+            {savedError ? (
+                <p className="sidebar__status sidebar__status--error">{savedError}</p>
+            ) : isSyncing ? (
+                <p className="sidebar__status">Syncing saved items…</p>
+            ) : null}
             <section className="sidebar-section sidebar-section--topic-bar">
                 <div className="sidebar-section__header">
                     <h2>Topic View bar</h2>

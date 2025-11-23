@@ -50,16 +50,16 @@ def test_prepare_final_report_requires_report_field() -> None:
     assert "'report'" in str(excinfo.value)
 
 
-def test_load_payload_requires_owner_username_with_owner_email() -> None:
+def test_load_payload_requires_username_with_user_email() -> None:
     with pytest.raises(SystemExit) as excinfo:
         load_payload(
             payload_file=None,
             topic="AI",
-            owner_email="owner@example.com",
-            owner_username=None,
+            user_email="user@example.com",
+            username=None,
         )
 
-    assert "owner_username" in str(excinfo.value)
+    assert "username" in str(excinfo.value)
 
 
 def test_load_payload_allows_override_when_payload_supplies_username(tmp_path: Path) -> None:
@@ -69,7 +69,7 @@ def test_load_payload_allows_override_when_payload_supplies_username(tmp_path: P
             {
                 "topic": "AI",
                 "mode": "generate_report",
-                "owner_username": "Payload User",
+                "username": "Payload User",
             }
         ),
         encoding="utf-8",
@@ -78,9 +78,9 @@ def test_load_payload_allows_override_when_payload_supplies_username(tmp_path: P
     payload = load_payload(
         payload_file=payload_file,
         topic=None,
-        owner_email="override@example.com",
-        owner_username=None,
+        user_email="override@example.com",
+        username=None,
     )
 
-    assert payload["owner_email"] == "override@example.com"
-    assert payload["owner_username"] == "Payload User"
+    assert payload["user_email"] == "override@example.com"
+    assert payload["username"] == "Payload User"

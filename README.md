@@ -21,7 +21,7 @@ Explorer relies on a handful of environment variables. Export them _in the shell
 - `OPENAI_BASE_URL` — optional; point at a proxy or compatible gateway.
 - `EXPLORER_DATABASE_URL` — optional; override the default `sqlite:///reportgen.db`.
 - `EXPLORER_REPORT_STORAGE_DIR` — optional; persist artifacts somewhere other than `data/reports`.
-- `EXPLORER_DEFAULT_OWNER_EMAIL` — optional; change the fallback owner for CLI runs.
+- `EXPLORER_DEFAULT_USER_EMAIL` — optional; change the fallback user for CLI runs.
 - `EXPLORER_DISABLE_STORAGE` — optional; when set to `1`/`true`, skip writing reports to the DB and filesystem (useful for local, single-user runs where persistence is unnecessary).
 
 Examples:

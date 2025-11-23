@@ -8,6 +8,8 @@ export const TOPIC_VIEW_BAR_INPUT_ID = "sidebar-topic-view-bar";
 export const MODEL_PRESET_STORAGE_KEY = "explorer-model-presets";
 export const MODEL_ACTIVE_PRESET_STORAGE_KEY = "explorer-active-model-preset";
 export const SUGGESTION_MODEL_STORAGE_KEY = "explorer-suggestion-model";
+export const USER_EMAIL_STORAGE_KEY = "explorer-user-email";
+export const USERNAME_STORAGE_KEY = "explorer-username";
 
 export const MODE_TABS = [
     { value: "topic", label: "From Topic" },
@@ -167,6 +169,31 @@ export function persistList(key, list) {
     localStorage.setItem(key, JSON.stringify(list));
 }
 
+export function loadUserProfile() {
+    const envEmail = typeof import.meta !== "undefined" ? import.meta.env?.VITE_USER_EMAIL : undefined;
+    const envUsername = typeof import.meta !== "undefined" ? import.meta.env?.VITE_USERNAME : undefined;
+    const storedEmail = localStorage.getItem(USER_EMAIL_STORAGE_KEY);
+    const storedUsername = localStorage.getItem(USERNAME_STORAGE_KEY);
+    const email = (storedEmail || envEmail || "").trim();
+    const username = (storedUsername || envUsername || "").trim();
+    return { email, username };
+}
+
+export function persistUserProfile(user) {
+    const email = (user?.email || "").trim();
+    const username = (user?.username || "").trim();
+    if (email) {
+        localStorage.setItem(USER_EMAIL_STORAGE_KEY, email);
+    } else {
+        localStorage.removeItem(USER_EMAIL_STORAGE_KEY);
+    }
+    if (username) {
+        localStorage.setItem(USERNAME_STORAGE_KEY, username);
+    } else {
+        localStorage.removeItem(USERNAME_STORAGE_KEY);
+    }
+}
+
 export function summarizeReport(text) {
     if (!text) return "";
     const clean = text.replace(/\s+/g, " ").trim();
@@ -247,6 +274,19 @@ export function persistSuggestionModel(model) {
     localStorage.setItem(SUGGESTION_MODEL_STORAGE_KEY, normalized || DEFAULT_SUGGESTION_MODEL);
 }
 
+function buildUserQuery(user) {
+    const email = (user?.email || "").trim();
+    if (!email) {
+        throw new Error("User email is required for this action.");
+    }
+    const params = new URLSearchParams({ user_email: email });
+    const username = (user?.username || "").trim();
+    if (username) {
+        params.set("username", username);
+    }
+    return params.toString();
+}
+
 export async function fetchTopicSuggestions(apiBase, {
     topic,
     seeds = [],
@@ -287,6 +327,79 @@ export async function fetchTopicSuggestions(apiBase, {
             console.warn("Falling back to local suggestions", error);
         }
         return [];
+    }
+}
+
+export async function fetchSavedTopics(apiBase, user, { signal } = {}) {
+    const query = buildUserQuery(user);
+    const response = await fetch(`${apiBase}/saved_topics?${query}`, { signal });
+    if (!response.ok) {
+        throw new Error(`Failed to load saved topics (${response.status}).`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((topic) => ({
+        id: topic.id,
+        prompt: topic.title,
+    }));
+}
+
+export async function createSavedTopic(apiBase, user, title) {
+    const query = buildUserQuery(user);
+    const normalizedTitle = (title || "").trim();
+    if (!normalizedTitle) {
+        throw new Error("Title is required to save a topic.");
+    }
+    const response = await fetch(`${apiBase}/saved_topics?${query}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: normalizedTitle }),
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to save topic (${response.status}).`);
+    }
+    const topic = await response.json();
+    return {
+        id: topic.id,
+        prompt: topic.title,
+    };
+}
+
+export async function deleteSavedTopic(apiBase, user, topicId) {
+    const query = buildUserQuery(user);
+    const response = await fetch(`${apiBase}/saved_topics/${topicId}?${query}`, {
+        method: "DELETE",
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to delete topic (${response.status}).`);
+    }
+}
+
+export async function fetchSavedReports(apiBase, user, { includeContent = true, signal } = {}) {
+    const query = buildUserQuery(user);
+    const url = includeContent ? `${apiBase}/reports?${query}&include_content=1` : `${apiBase}/reports?${query}`;
+    const response = await fetch(url, { signal });
+    if (!response.ok) {
+        throw new Error(`Failed to load reports (${response.status}).`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((report) => ({
+        id: report.id,
+        topic: report.topic || "",
+        title: report.title || report.topic || "Explorer Report",
+        content: report.content || "",
+        preview: report.summary || summarizeReport(report.content || report.title || report.topic || ""),
+    }));
+}
+
+export async function deleteSavedReport(apiBase, user, reportId) {
+    const query = buildUserQuery(user);
+    const response = await fetch(`${apiBase}/reports/${reportId}?${query}`, {
+        method: "DELETE",
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to delete report (${response.status}).`);
     }
 }
 
