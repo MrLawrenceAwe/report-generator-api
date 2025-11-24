@@ -118,20 +118,6 @@ export function createEmptyOutlineSection() {
     };
 }
 
-export function generateRelatedTopics(topic) {
-    const normalized = (topic || "").trim();
-    if (!normalized) return [];
-    const anchor = normalized.split(/\s+/).slice(0, 3).join(" ") || normalized;
-    const cleanedAnchor = anchor.replace(/^(history of|future of|introduction to|overview of)\s+/i, "").trim() || anchor;
-    const suggestions = [
-        `${cleanedAnchor} overview`,
-        `${cleanedAnchor} applications`,
-        `${cleanedAnchor} challenges`,
-        `Future of ${cleanedAnchor}`,
-    ].map((entry) => entry.replace(/\s+/g, " ").trim());
-    return Array.from(new Set(suggestions));
-}
-
 export function cleanHeadingForTopic(heading) {
     const original = (heading || "").trim();
     if (!original) return "";
@@ -335,7 +321,7 @@ export async function fetchTopicSuggestions(apiBase, {
             .filter(Boolean);
     } catch (error) {
         if (!(error && error.name === "AbortError")) {
-            console.warn("Falling back to local suggestions", error);
+            console.warn("Failed to fetch topic suggestions", error);
         }
         return [];
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchTopicSuggestions, generateRelatedTopics } from '../utils/helpers';
+import { fetchTopicSuggestions } from '../utils/helpers';
 
 export function useTopicView({
     apiBase,
@@ -46,8 +46,7 @@ export function useTopicView({
                 signal: controller.signal,
             });
             if (controller.signal.aborted) return;
-            const merged = remote.length ? remote : generateRelatedTopics(topicViewTopic);
-            setTopicSuggestions(merged);
+            setTopicSuggestions(remote || []);
             setTopicSuggestionsLoading(false);
         };
         loadSuggestions().catch(() => setTopicSuggestionsLoading(false));

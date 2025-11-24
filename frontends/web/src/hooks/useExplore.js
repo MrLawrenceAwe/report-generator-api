@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchTopicSuggestions, generateRelatedTopics } from '../utils/helpers';
+import { fetchTopicSuggestions } from '../utils/helpers';
 
 export function useExplore({
     apiBase,
@@ -31,10 +31,7 @@ export function useExplore({
                 signal: controller.signal,
             });
             if (controller.signal.aborted) return;
-            const fallbackSeeds = seeds.filter(Boolean).slice(0, 1);
-            const localFallback = fallbackSeeds.length ? generateRelatedTopics(fallbackSeeds[0]) : [];
-            const merged = remote.length ? remote : localFallback;
-            setExploreSuggestions(merged);
+            setExploreSuggestions(remote || []);
             setExploreLoading(false);
         };
         loadExplore();
