@@ -167,6 +167,17 @@ function App() {
     stopGeneration,
   } = useChat(apiBase, rememberReport);
 
+  useEffect(() => {
+    if (!isRunning) return undefined;
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "A report is still generating. Leaving will stop it.";
+      return event.returnValue;
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isRunning]);
+
   const forgetReport = useCallback(async (id) => {
     if (!id) return;
 
@@ -497,6 +508,14 @@ function App() {
     chatPaneClasses.push("chat-pane--topic-view");
   }
   const chatPaneClassName = chatPaneClasses.join(" ");
+
+  useEffect(() => {
+    if (isRunning || isTopicViewOpen || isReportViewOpen || isHomeView) return;
+    if (messages.length === 0) {
+      setIsHomeView(true);
+      setMode("topic");
+    }
+  }, [isRunning, isTopicViewOpen, isReportViewOpen, isHomeView, messages.length, setMode]);
 
   const generatingReport = useMemo(() => {
     // If running, we definitely have an active session.
