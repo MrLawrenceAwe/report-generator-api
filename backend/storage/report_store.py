@@ -198,6 +198,8 @@ class GeneratedReportStore:
             )
         )
         if existing_topic:
+            if existing_topic.is_deleted:
+                existing_topic.is_deleted = False
             return existing_topic
         base_slug = slug_override or _slugify(title)
         slug = base_slug

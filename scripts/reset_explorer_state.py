@@ -58,7 +58,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--db-path",
-        default="reportgen.db",
+        default="data/reportgen.db",
         help="Path to the SQLite database (default: %(default)s)",
     )
     parser.add_argument(

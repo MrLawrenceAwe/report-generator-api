@@ -161,6 +161,33 @@ def _fetch_saved_topic(session_factory, report_id):
         return topic
 
 
+def test_prepare_report_revives_soft_deleted_topic(tmp_path: Path):
+    session_factory = _session_factory()
+    store = GeneratedReportStore(base_dir=tmp_path / "reports", session_factory=session_factory)
+    with session_scope(session_factory) as session:
+        user = User(email="user@example.com", full_name="User", username="User")
+        session.add(user)
+        session.flush()
+        topic = SavedTopic(slug="reusable-topic", title="Reusable Topic", owner=user, is_deleted=True)
+        session.add(topic)
+        session.flush()
+
+    outline = Outline(report_title="Reusable Topic", sections=[])
+    request = GenerateRequest.model_validate(
+        {
+            "topic": "Reusable Topic",
+            "mode": "generate_report",
+            "user_email": "user@example.com",
+            "username": "User",
+        }
+    )
+
+    handle = store.prepare_report(request, outline)
+    topic = _fetch_saved_topic(session_factory, handle.report_id)
+    assert topic.slug == "reusable-topic"
+    assert topic.is_deleted is False
+
+
 def test_prepare_report_trims_request_topic_titles(tmp_path: Path):
     session_factory = _session_factory()
     store = GeneratedReportStore(

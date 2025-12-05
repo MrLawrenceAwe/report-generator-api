@@ -16,7 +16,7 @@ from backend.schemas import (
 from backend.utils.openai_client import OpenAITextClient, get_default_text_client
 
 _DEFAULT_DB_ENV = "EXPLORER_DATABASE_URL"
-_DEFAULT_DB_URL = "sqlite:///reportgen.db"
+_DEFAULT_DB_URL = "sqlite:///data/reportgen.db"
 
 
 class SuggestionService:
@@ -76,10 +76,10 @@ class SuggestionService:
                 title = (section.get("title") or "").strip()
                 if title:
                     headings.append(title)
-            for sub in section.get("subsections") or []:
-                cleaned_sub = (sub or "").strip()
-                if cleaned_sub:
-                    headings.append(cleaned_sub)
+                for sub in section.get("subsections") or []:
+                    cleaned_sub = (sub or "").strip()
+                    if cleaned_sub:
+                        headings.append(cleaned_sub)
         return headings
 
     def _build_prompt(self, seeds: Sequence[str]) -> str:

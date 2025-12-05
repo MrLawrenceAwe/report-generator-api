@@ -32,7 +32,7 @@ def get_report_service() -> ReportGeneratorService:
 
 @lru_cache
 def get_session_factory() -> sessionmaker[Session]:
-    database_url = os.environ.get("EXPLORER_DATABASE_URL", "sqlite:///reportgen.db")
+    database_url = os.environ.get("EXPLORER_DATABASE_URL", "sqlite:///data/reportgen.db")
     engine = create_engine_from_url(database_url)
     Base.metadata.create_all(engine)
     return create_session_factory(engine)
